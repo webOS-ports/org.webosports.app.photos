@@ -1,0 +1,11 @@
+{
+	"title": "Photos & Videos",
+	"id": "org.webosports.app.photos",
+	"version": "0.0.1",
+	"vendor": "WebOS Ports",
+	"vendor_url": "https://github.com/webOS-ports/org.webosports.app.photos",
+	"type": "web",
+	"main": "index.html",
+	"icon": "icon.png",
+	"uiRevision": "2"
+}
