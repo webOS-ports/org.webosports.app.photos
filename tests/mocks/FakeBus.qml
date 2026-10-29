@@ -29,6 +29,8 @@ QtObject {
     id: bus
 
     property var calls: []
+    // The subscriptions cancelled, by uri
+    property var cancelled: []
     property var replies: ({})
     property var accounts: ({
         "local": { accountId: "local", syncStatus: "idle", isEnabled: true },
@@ -93,7 +95,7 @@ QtObject {
             subscribers = s;
             onReply({ payload: JSON.stringify({ returnValue: true, accounts: accounts }) });
         }
-        return { cancel: function() {} };
+        return { cancel: function() { bus.cancelled = bus.cancelled.concat([uri]); } };
     }
 
     // A later answer of subscribeToAccountsInfo: one account's status.

@@ -65,6 +65,7 @@ TestCase {
 
     function startApp(withService) {
         bus.calls = [];
+        bus.cancelled = [];
         bus.subscribers = [];
         bus.replies = withService === false ? {
             "luna://com.palm.service.photos/getAccountsCapability": { busError: "no service" } } : {};
@@ -230,6 +231,7 @@ TestCase {
         bus.push({ accountId: "acc-dropbox", syncStatus: "idle", error: "Network down" });
         tryCompare(app, "notice", "Network down");
         compare(app.noticeTitle, "Syncing failed");
+        compare(findChild(find("notice"), "noticeTitle").text, "Syncing failed", "shown in bold above");
         shot("sync-failed");
         tap(find("noticeCloseButton"));
         compare(app.notice, "");
@@ -434,6 +436,7 @@ TestCase {
         verify(app.picture.isOpen);
         compare(app.picture.current._id, "img-h1");
         verify(app.fullScreen);
+        compare(app.windowProperties["LuneOS_fullscreen"], "true", "the card full screen");
         var controls = find("pictureControls");
         verify(controls.visible);
         verify(find("printButton").visible);
@@ -551,6 +554,8 @@ TestCase {
         var engine = app.picture.video.engine;
         compare(engine.seeks, [30000]);
         verify(app.keepScreenOn);
+        compare(lastCall("luna://com.palm.display/control/setProperty"),
+                { requestBlock: true, client: "org.webosports.app.photos" }, "the display held on");
         compare(String(engine.source), Library.fileUrl(root + "/pictures/Holiday/clip.mp4"));
         engine.advance(5000);
         compare(find("timePlayed").text, "0:35");
@@ -561,6 +566,7 @@ TestCase {
         tap(find("playPauseButton"));
         verify(!app.picture.playing);
         verify(!app.keepScreenOn);
+        compare(bus.cancelled, ["luna://com.palm.display/control/setProperty"], "and let go");
         compare(app.store.item("vid-h").lastPlayTime, 35, "the place is kept on pause");
         tap(find("playPauseButton"));
         verify(app.picture.playing);

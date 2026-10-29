@@ -358,6 +358,7 @@ WebOSWindow {
      * {"snapshot": "<png path>"}, a picture of the window drawn by the app. */
     LaunchParams {
         window: appWindow
+        snapshotItem: root
         onLaunched: function(params) { appWindow.handleLaunch(params); }
         onAppMenuRequested: appWindow.openAppMenu()
     }
@@ -371,8 +372,6 @@ WebOSWindow {
             exhibitionWanted = true;
             return;
         }
-        if (typeof params.snapshot === "string" && params.snapshot.charAt(0) === "/")
-            snapshot(params.snapshot);
         var t = Library.launchTarget(params);
         if (t) {
             pendingLaunch = t;
@@ -411,10 +410,6 @@ WebOSWindow {
             openPicture(album ? album._id : "", item._id, false);
     }
 
-    function snapshot(path) {
-        root.grabToImage(function(result) { result.saveToFile(path); });
-    }
-
     Loader {
         id: exhibitionLoader
         active: appWindow.exhibitionWanted
@@ -426,33 +421,21 @@ WebOSWindow {
     }
     property alias exhibition: exhibitionLoader
 
-    /*
-     * The picture full screen covers the status bar and gesture area too
-     * (luna-next-cardshell's "LuneOS_fullscreen" window property, as Videos
-     * does; a flick up from the bottom edge still leaves it).
-     */
+    // The picture full screen covers the status bar and gesture area too;
+    // a flick up from the bottom edge still leaves it.
     readonly property bool fullScreen: pictureView.isOpen || slideshowView.isOpen
-    onFullScreenChanged: setWindowProperty("LuneOS_fullscreen", fullScreen ? "true" : "false")
+    WindowFullScreen {
+        window: appWindow
+        active: appWindow.fullScreen
+    }
 
-    /*
-     * The screen kept on while a video plays or a slideshow runs:
-     * luna-displaymanager's "requestBlock" for as long as the call stays
-     * open. Needs "display.operation".
-     */
+    // The screen kept on while a video plays or a slideshow runs. Needs
+    // "display.operation".
     readonly property bool keepScreenOn: active && (pictureView.playing || (slideshowView.isOpen && slideshowView.running))
-    property var screenBlockCall: null
-    onKeepScreenOnChanged: {
-        if (keepScreenOn && !screenBlockCall) {
-            screenBlockCall = appWindow.busSubscribe("luna://com.palm.display/control/setProperty",
-                                                JSON.stringify({ "requestBlock": true, "client": "org.webosports.app.photos" }),
-                                                function() {},
-                                                function(error) { console.warn("Could not keep the screen on: " + error); })
-                              || ({});
-        } else if (!keepScreenOn && screenBlockCall) {
-            if (typeof screenBlockCall.cancel === "function")
-                screenBlockCall.cancel();
-            screenBlockCall = null;
-        }
+    KeepScreenOn {
+        clientName: "org.webosports.app.photos"
+        subscribe: appWindow.busSubscribe
+        active: appWindow.keepScreenOn
     }
 
     onActiveChanged: {
