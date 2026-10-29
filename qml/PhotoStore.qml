@@ -27,9 +27,10 @@ import "js/Library.js" as Library
  *
  * Reading: the albums, pictures and videos in db8 (js/Library.js says how
  * they fit together), watched, so what the indexer finds and the photos
- * service syncs or changes shows up by itself. db8 refuses an app without
- * a grant on the indexer's kinds (-3963); com.palm.mediapermissions then
- * asks the user once, as Music's library does.
+ * service syncs or changes shows up by itself. The indexer grants the app
+ * read access to its kinds; where it does not (an older image), db8
+ * refuses the app (-3963) and com.palm.mediapermissions asks the user
+ * once, as Music's library does.
  *
  * Doing: com.palm.service.photos (app-services), webOS 3.0's photos
  * service written anew for LuneOS, under its old method names - it brings

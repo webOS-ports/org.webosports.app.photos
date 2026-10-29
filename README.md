@@ -65,7 +65,8 @@ The pictures are LuneOS's default wallpapers, made into a demo library;
 - New Album, Rename and Delete Album for the device's albums; Sync Now for
   a cloud account; Preferences & Accounts in the app menu, with how long a
   slideshow shows each photo.
-- Asks once for permission to see the pictures
+- Reads the pictures with the media indexer's grant; where the indexer
+  has none for the app, asks once for permission to see them
   (`com.palm.mediapermissions`), as the other media apps do.
 
 **Albums**
@@ -111,8 +112,12 @@ parameters:
 - `com.palm.service.photos` (app-services) for the cloud albums, with the
   cloud connectors of
   [luneos-synergy-connectors](https://github.com/webOS-ports/luneos-synergy-connectors)
-  for the accounts; the media indexer for the device's pictures. Without
-  the photos service the app shows the device's pictures only.
+  for the accounts. Without the photos service the app shows the device's
+  pictures only.
+- The media indexer for the device's pictures and videos, with a read
+  grant on `com.palm.media.image.album`, `com.palm.media.image.file` and
+  `com.palm.media.video.file` for this app; without one the app asks
+  through `com.palm.mediapermissions`.
 
 ## On a development machine
 
