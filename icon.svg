@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<defs>
+<radialGradient id="plate" cx="128" cy="177" r="163" gradientUnits="userSpaceOnUse">
+    <stop offset="0.3" stop-color="#ffffff" stop-opacity="0.02"/>
+    <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.1"/>
+    <stop offset="0.7" stop-color="#ffffff" stop-opacity="0.23"/>
+    <stop offset="1" stop-color="#ffffff" stop-opacity="0.49"/>
+  </radialGradient>
+<radialGradient id="plateshadow" cx="128" cy="129" r="121" gradientUnits="userSpaceOnUse">
+    <stop offset="0.92" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="0.926" stop-color="#000000" stop-opacity="0.07"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+  </radialGradient>
+<radialGradient id="drop" cx="128" cy="214" r="110" gradientTransform="translate(0 171) scale(1 0.2)" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#000000" stop-opacity="0.35"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+  </radialGradient>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5d6f8c"/>
+    <stop offset="0.35" stop-color="#d98a52"/>
+    <stop offset="0.62" stop-color="#ff8a24"/>
+    <stop offset="0.7" stop-color="#ff6a12"/>
+  </linearGradient>
+<linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7b4a2e"/>
+    <stop offset="1" stop-color="#2a1d1a"/>
+  </linearGradient>
+<linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#c6e33a"/>
+    <stop offset="1" stop-color="#5f9a08"/>
+  </linearGradient>
+<linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3d8fd8"/>
+    <stop offset="1" stop-color="#123f86"/>
+  </linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#ffffff"/>
+    <stop offset="1" stop-color="#e9e7e6"/>
+  </linearGradient>
+<radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#fff6c8"/>
+    <stop offset="0.45" stop-color="#ffd25a"/>
+    <stop offset="1" stop-color="#ff8a24" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+<ellipse cx="128" cy="214" rx="110" ry="22" fill="url(#drop)"/>
+<circle cx="128" cy="129" r="121" fill="url(#plateshadow)"/>
+<circle cx="128" cy="128" r="112" fill="url(#plate)"/>
+<circle cx="128" cy="128" r="112" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.5"/>
+<g transform="translate(-14 6) rotate(-20 128 132)">
+  <rect x="40" y="58" width="160" height="134" rx="2" fill="#000000" fill-opacity="0.18" transform="translate(2 4)"/>
+  <rect x="40" y="58" width="160" height="134" rx="2" fill="url(#paper)"/>
+  <rect x="50" y="68" width="140" height="114" fill="url(#leaf)"/>
+</g>
+<g transform="translate(14 4) rotate(17 128 132)">
+  <rect x="52" y="60" width="160" height="134" rx="2" fill="#000000" fill-opacity="0.18" transform="translate(2 4)"/>
+  <rect x="52" y="60" width="160" height="134" rx="2" fill="url(#paper)"/>
+  <rect x="62" y="70" width="140" height="114" fill="url(#water)"/>
+</g>
+<g transform="translate(13 11) scale(0.9) rotate(-3 128 124)">
+  <rect x="44" y="50" width="168" height="146" rx="2" fill="#000000" fill-opacity="0.25" transform="translate(2 5)"/>
+  <rect x="44" y="50" width="168" height="146" rx="2" fill="url(#paper)"/>
+  <rect x="55" y="61" width="146" height="124" fill="url(#sky)"/>
+  <rect x="55" y="140" width="146" height="45" fill="url(#sea)"/>
+  <circle cx="166" cy="138" r="13" fill="url(#sun)"/>
+  <rect x="150" y="139" width="32" height="2" fill="#ffd25a" fill-opacity="0.8"/>
+  <path d="M55 185 L55 150 C66 146 72 152 80 149 C88 146 92 156 104 158 C116 160 120 168 134 170 C150 172 170 176 201 178 L201 185 Z" fill="#1d1512"/>
+  <path d="M60 100 C80 98 100 104 120 101" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2" fill="none"/>
+</g>
+</svg>

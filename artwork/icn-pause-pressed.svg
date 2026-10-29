@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="0 0 32 32">
+<defs>
+<filter id="inner" filterUnits="userSpaceOnUse" x="-4" y="-4" width="40" height="40"><feGaussianBlur stdDeviation="0.6"/></filter>
+<filter id="glow" filterUnits="userSpaceOnUse" x="-4" y="-4" width="40" height="40"><feGaussianBlur in="SourceAlpha" stdDeviation="1.436" result="b"/><feFlood flood-color="#53b7ff"/><feComposite in2="b" operator="in"/></filter>
+</defs>
+<g transform="translate(0,1.04)">
+<g opacity="1" filter="url(#glow)" stroke="#fff" stroke-width="2.547" stroke-linejoin="round"><rect x="9" y="7" width="4" height="17" rx="2" fill="#fff"/><rect x="19" y="7" width="4" height="17" rx="2" fill="#fff"/></g>
+<g opacity="0.011" filter="url(#glow)" stroke="#fff" stroke-width="2.547" stroke-linejoin="round"><rect x="9" y="7" width="4" height="17" rx="2" fill="#fff"/><rect x="19" y="7" width="4" height="17" rx="2" fill="#fff"/></g>
+<rect x="9" y="7" width="4" height="17" rx="2" fill="#fff"/><rect x="19" y="7" width="4" height="17" rx="2" fill="#fff"/>
+</g>
+</svg>

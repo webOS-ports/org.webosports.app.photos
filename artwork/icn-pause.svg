@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="0 0 32 32">
+<defs>
+<linearGradient id="fade" x1="0" y1="3.2" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0.158"/></linearGradient>
+<filter id="shadow" filterUnits="userSpaceOnUse" x="-4" y="-4" width="40" height="40"><feGaussianBlur in="SourceAlpha" stdDeviation="1.285"/><feOffset dy="1.292" result="b"/><feFlood flood-color="#000" flood-opacity="0.605"/><feComposite in2="b" operator="in"/></filter>
+<mask id="knock" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32"><rect width="32" height="32" fill="#fff"/><rect x="9" y="7" width="4" height="17" rx="2" fill="#000"/><rect x="19" y="7" width="4" height="17" rx="2" fill="#000"/></mask>
+</defs>
+<g mask="url(#knock)"><rect width="32" height="32" fill="#000" fill-opacity="0"/><g filter="url(#shadow)" stroke="#000" stroke-width="0.971" stroke-linejoin="round"><rect x="9" y="7" width="4" height="17" rx="2" fill="url(#fade)"/><rect x="19" y="7" width="4" height="17" rx="2" fill="url(#fade)"/></g></g>
+<rect x="9" y="7" width="4" height="17" rx="2" fill="url(#fade)"/><rect x="19" y="7" width="4" height="17" rx="2" fill="url(#fade)"/>
+</svg>
