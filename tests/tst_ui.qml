@@ -744,6 +744,11 @@ TestCase {
         for (var i = 0; i < app.appMenu.count; i++)
             labels.push(app.appMenu.itemAt(i).text);
         compare(labels, ["New Album", "Sync Now", "Preferences & Accounts"]);
+        // At the window's top left, over the app, as the shell's app menu
+        compare(app.appMenu.parent, app.contentItem);
+        var at = app.appMenu.contentItem.mapToItem(app.contentItem, 0, 0);
+        verify(at.x < Units.gu(4) && at.y < Units.gu(4), "at the top left: " + at.x + "," + at.y);
+        shot("app-menu");
         app.appMenu.itemAt(2).triggered();
         compare(launches[0].id, "com.palm.app.accounts");
         app.appMenu.itemAt(1).triggered();
