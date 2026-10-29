@@ -1,0 +1,11 @@
+# Sizes for tools/make-images.sh where a picture is not drawn at its SVG's
+# own width and height: its name and its size in pixels at grid unit 10
+# (the TouchPad, webOS's own scale) - "<width>" when square, else
+# "<width>x<height>". qml/images/1x/ gets that size, 2x/ and 3x/ twice and
+# three times it.
+#
+# The legacy artwork (all but cloud) is drawn at the legacy pixel size, so it
+# is not listed here.
+
+# a cloud library without an icon of its own (4 grid units)
+cloud 40
