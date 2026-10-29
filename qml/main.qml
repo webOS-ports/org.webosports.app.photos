@@ -27,6 +27,7 @@ import LuneOS.Service 1.0
 import LuneOS.System 1.0
 
 import LuneOS.Components 1.0 as LC
+import LuneOS.Forms 1.0 as Forms
 import "components"
 import "js/Library.js" as Library
 import "js/Images.js" as Images
@@ -503,55 +504,18 @@ WebOSWindow {
             }
 
             // What went wrong, until dismissed.
-            Rectangle {
+            Forms.StatusNotice {
                 id: noticeBar
                 objectName: "notice"
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                height: visible ? noticeColumn.height + Units.gu(2) : 0
+                anchors.margins: Units.gu(1)
                 visible: appWindow.notice !== ""
-                color: "#f4ecd0"
+                title: appWindow.noticeTitle
+                text: appWindow.notice
                 z: 10
-
-                Column {
-                    id: noticeColumn
-                    anchors.left: parent.left
-                    anchors.right: closeNotice.left
-                    anchors.margins: Units.gu(1.5)
-                    anchors.verticalCenter: parent.verticalCenter
-                    Label {
-                        width: parent.width
-                        visible: text !== ""
-                        text: appWindow.noticeTitle
-                        font.bold: true
-                        color: "#5a4b16"
-                        wrapMode: Text.Wrap
-                        font.pixelSize: FontUtils.sizeToPixels("medium")
-                    }
-                    Label {
-                        width: parent.width
-                        text: appWindow.notice
-                        color: "#5a4b16"
-                        wrapMode: Text.Wrap
-                        font.pixelSize: FontUtils.sizeToPixels("small")
-                    }
-                }
-                MouseArea {
-                    id: closeNotice
-                    objectName: "closeNotice"
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: Units.gu(6)
-                    onClicked: { appWindow.notice = ""; appWindow.noticeTitle = ""; }
-                    Label {
-                        anchors.centerIn: parent
-                        text: "OK"
-                        color: "#5a4b16"
-                        font.bold: true
-                    }
-                }
+                onDismissed: { appWindow.notice = ""; appWindow.noticeTitle = ""; }
             }
         }
 

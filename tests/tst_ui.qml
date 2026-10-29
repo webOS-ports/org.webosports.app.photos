@@ -231,7 +231,7 @@ TestCase {
         tryCompare(app, "notice", "Network down");
         compare(app.noticeTitle, "Syncing failed");
         shot("sync-failed");
-        tap(find("closeNotice"));
+        tap(find("noticeCloseButton"));
         compare(app.notice, "");
     }
 
