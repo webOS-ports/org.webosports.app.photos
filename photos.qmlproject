@@ -1,0 +1,43 @@
+// The app for Qt Creator: open this file, pick a kit with the Qt that
+// luneos-components was built against, and run. See "Qt Creator" in
+// README.md.
+import QmlProject
+
+Project {
+    // The app on the desktop stand-ins, as run-desktop.sh starts it
+    mainFile: "tests/mainDesktop.qml"
+    qt6Project: true
+
+    // luneos-components next to this checkout, as run-desktop.sh expects:
+    // its modules, and the QML mocks of its C++ plugins
+    importPaths: [ "../luneos-components/modules", "../luneos-components/test/imports" ]
+
+    Environment {
+        QT_QUICK_CONTROLS_STYLE: "QtQuick.Controls.LuneOS"
+    }
+
+    QmlFiles {
+        directory: "qml"
+    }
+    QmlFiles {
+        directory: "tests"
+    }
+    JavaScriptFiles {
+        directory: "qml"
+    }
+    JavaScriptFiles {
+        directory: "tests"
+    }
+    ImageFiles {
+        directory: "qml"
+    }
+    // The pictures' SVGs; the app shows their PNGs (tools/make-images.sh)
+    Files {
+        filter: "*.svg;sizes"
+        directory: "artwork"
+    }
+    Files {
+        filter: "*.json;*.sh;*.md"
+        directory: "."
+    }
+}
