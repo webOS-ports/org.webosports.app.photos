@@ -21,6 +21,7 @@ import QtQuick.Controls
 import QtQuick.Controls.LuneOS 2.0
 
 import LunaNext.Common 0.1
+import LuneOS.Components 1.0 as LC
 
 import "components"
 import "js/Library.js" as Library
@@ -147,8 +148,7 @@ Rectangle {
 
     // A short word over the picture ("Wallpaper set").
     function flash(text) {
-        toast.text = text;
-        toastTimer.restart();
+        toast.show(text);
     }
 
     Timer {
@@ -187,7 +187,7 @@ Rectangle {
                 id: zoom
                 anchors.fill: parent
                 active: modelData.mediaType !== "video"
-                sourceComponent: ZoomImage {
+                sourceComponent: LC.ZoomableImage {
                     source: Library.fileUrl(Library.viewPath(modelData))
                     onTapped: view.toggleControls()
                 }
@@ -379,23 +379,7 @@ Rectangle {
         }
     }
 
-    Rectangle {
-        anchors.centerIn: parent
-        width: toast.width + Units.gu(4)
-        height: toast.height + Units.gu(2)
-        radius: Units.gu(1)
-        color: "#d0000000"
-        visible: toastTimer.running
-        Label {
-            id: toast
-            objectName: "toast"
-            anchors.centerIn: parent
-            color: "white"
-            font.pixelSize: FontUtils.sizeToPixels("medium")
-        }
-    }
-    Timer {
-        id: toastTimer
-        interval: 2500
+    LC.Toast {
+        id: toast
     }
 }
