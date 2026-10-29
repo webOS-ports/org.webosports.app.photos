@@ -17,20 +17,23 @@
  */
 
 .pragma library
+.import LuneOS.Components 1.0 as LC
 
 /*
  * The app's pictures: PNGs drawn from artwork/ by tools/make-images.sh at
- * one, two and three times their size at grid unit 10. The set is the
- * smallest that is not smaller than the screen needs, so a picture is only
- * ever made smaller (sourceSize does that once, smoothly), never blown up;
- * at grid unit 10 it is the drawn pixels themselves.
+ * one, two and three times their size at grid unit 10, in qml/images/1x/,
+ * 2x/ and 3x/. luneos-components' ArtworkScale picks the set: the smallest
+ * that is not smaller than the screen needs, so a picture is only ever made
+ * smaller (sourceSize does that once, smoothly), never blown up; at grid
+ * unit 10 it is the drawn pixels themselves.
  *
  *     Image { source: Images.url("check", Units.gridUnit); sourceSize: ... }
  */
 
+var folder = Qt.resolvedUrl("../images/");
+
 function scale(gridUnit) {
-    // Five percent over a set is still that set: not worth twice the pixels
-    return Math.max(1, Math.min(3, Math.ceil(gridUnit / 10 - 0.05)));
+    return LC.ArtworkScale.scale(gridUnit);
 }
 
 // The pictures drawn with a "-pressed" state too (artwork/<name>-pressed.svg)
@@ -43,5 +46,5 @@ function hasPressed(name) {
 }
 
 function url(name, gridUnit) {
-    return Qt.resolvedUrl("../images/" + scale(gridUnit) + "x/" + name + ".png");
+    return LC.ArtworkScale.url(folder, name, gridUnit);
 }

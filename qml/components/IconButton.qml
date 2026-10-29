@@ -27,38 +27,14 @@ import "../js/Images.js" as Images
  * LuneOS.Forms' toolbar key with a picture from qml/images ("<image>", a
  * PNG of tools/make-images.sh), or a short text (the speed), on the
  * player's dark bars: while held or checked it shows the picture's
- * "-pressed" state, the legacy glow, where it has one. Forms draws its
- * picture from an SVG; the app's are PNGs, so the key's inside is its own.
+ * "-pressed" state, the legacy glow, where it has one.
  */
 Forms.IconToolButton {
-    id: key
-
     appearance: "overlay"
     implicitHeight: Math.max(Units.gu(5.5), 54)
     // The legacy toolbar pictures are 32 px
     iconSize: Units.gu(3.2)
-
-    contentItem: Item {
-        Image {
-            objectName: "iconButtonImage"
-            anchors.centerIn: parent
-            width: key.iconSize
-            height: key.iconSize
-            visible: key.image !== ""
-            source: key.image === "" ? ""
-                    : Images.url((key.pressed || key.checked) && Images.hasPressed(key.image)
-                                 ? key.image + "-pressed" : key.image, Units.gridUnit)
-            sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-            opacity: key.enabled ? 1.0 : 0.35
-        }
-        Text {
-            anchors.centerIn: parent
-            visible: key.image === ""
-            text: key.label
-            color: key.labelColor
-            opacity: key.enabled ? 1.0 : 0.35
-            font.pixelSize: FontUtils.sizeToPixels("medium")
-            font.bold: true
-        }
-    }
+    imageFolder: Images.folder
+    imageFormat: "png"
+    imageHasPressed: Images.hasPressed(image)
 }
