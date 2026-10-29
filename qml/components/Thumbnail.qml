@@ -36,6 +36,7 @@ LC.PlaceholderImage {
 
     property var item: null
 
+    crop: false
     placeholder: Images.url(item && item.mediaType === "video" ? "blank-video" : "empty-thumbnail", Units.gridUnit)
     source: Library.fileUrl(Library.thumbnailPath(item, Math.max(width, height)))
 }

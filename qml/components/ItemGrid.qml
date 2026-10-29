@@ -30,31 +30,41 @@ import "../js/Images.js" as Images
  * video shows its name and length on a bar, and while selecting a picked
  * one is framed in blue and the others are dimmed.
  */
-GridView {
-    id: grid
+Flickable {
+  id: grid
 
-    property var items: []
-    property bool selecting: false
-    property var selection: Library.newSelection()
-    signal tapped(var item, int index)
-    signal thumbnailBroken()
+  clip: true
+  boundsBehavior: Flickable.StopAtBounds
 
-    readonly property int columns: Math.max(3, Math.floor(width / Units.gu(16)))
-    cellWidth: Math.floor(width / columns)
-    cellHeight: cellWidth
-    clip: true
-    model: items
-    boundsBehavior: Flickable.StopAtBounds
+  property var items: []
+  property bool selecting: false
+  property var selection: Library.newSelection()
+  signal tapped(var item, int index)
+  signal thumbnailBroken()
 
-    delegate: Item {
+  readonly property real rowHeight: Units.gu(16)
+
+  Flow {
+
+    anchors.fill: parent
+    //readonly property int columns: Math.max(3, Math.floor(width / Units.gu(16)))
+    //cellWidth: Math.floor(width / columns)
+    //cellHeight: cellWidth
+
+    Repeater {
+      id: flowRepeater
+      model: grid.items
+      delegate: Item {
         id: cell
         objectName: "item-" + modelData._id
-        width: grid.cellWidth
-        height: grid.cellHeight
+        width: cellThumbnail.width
+        height: grid.rowHeight
         readonly property bool picked: grid.selecting && Library.isSelected(grid.selection, modelData._id)
 
         Thumbnail {
-            anchors.fill: parent
+            id: cellThumbnail
+            height: parent.height
+            width: height*cellThumbnail.aspectRatio
             anchors.margins: 1
             // While selecting, what is not picked is dimmed, as webOS did
             opacity: grid.selecting && !cell.picked ? 0.4 : 1.0
@@ -121,4 +131,6 @@ GridView {
             onClicked: grid.tapped(modelData, index)
         }
     }
+    }
+  }
 }
