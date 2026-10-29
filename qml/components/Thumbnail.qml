@@ -19,6 +19,7 @@
 import QtQuick
 
 import LunaNext.Common 0.1
+import LuneOS.Components 1.0 as LC
 
 import "../js/Library.js" as Library
 import "../js/Images.js" as Images
@@ -27,39 +28,14 @@ import "../js/Images.js" as Images
  * A picture or video, small: the thumbnail the indexer or the photos
  * service made, or the file scaled down when the thumbnail is too small
  * for the cell; a video without one shows the video sign. A thumbnail that
- * does not load (its file gone) asks the service for new ones.
+ * does not load (its file gone) says broken(), and the grid asks the
+ * service for new ones.
  */
-Item {
+LC.PlaceholderImage {
     id: thumb
 
     property var item: null
-    property bool crop: true
-    signal broken()
 
-    Rectangle {
-        anchors.fill: parent
-        color: "#2b2b2b"
-    }
-    Image {
-        anchors.centerIn: parent
-        width: Math.min(parent.width, parent.height) * 0.4
-        height: width
-        sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-        source: Images.url(thumb.item && thumb.item.mediaType === "video" ? "blank-video" : "empty-thumbnail", Units.gridUnit)
-        opacity: 0.35
-        visible: picture.status !== Image.Ready
-    }
-    Image {
-        id: picture
-        objectName: "picture"
-        anchors.fill: parent
-        asynchronous: true
-        autoTransform: true
-        cache: true
-        fillMode: thumb.crop ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-        clip: true
-        sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-        source: Library.fileUrl(Library.thumbnailPath(thumb.item, Math.max(width, height)))
-        onStatusChanged: if (status === Image.Error) thumb.broken()
-    }
+    placeholder: Images.url(item && item.mediaType === "video" ? "blank-video" : "empty-thumbnail", Units.gridUnit)
+    source: Library.fileUrl(Library.thumbnailPath(item, Math.max(width, height)))
 }
