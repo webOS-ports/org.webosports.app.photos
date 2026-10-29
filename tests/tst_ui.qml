@@ -227,7 +227,7 @@ TestCase {
         compare(app.libraryAlbums().length, 6);
         // A sync shows a spinner on its library.
         bus.push({ accountId: "acc-dropbox", syncStatus: "syncing" });
-        tryVerify(function() { return findChild(find("library-acc-dropbox"), "syncSpinner") !== null; });
+        tryVerify(function() { return findChild(find("library-acc-dropbox"), "rowBusy") !== null; });
         bus.push({ accountId: "acc-dropbox", syncStatus: "idle", error: "Network down" });
         tryCompare(app, "notice", "Network down");
         compare(app.noticeTitle, "Syncing failed");

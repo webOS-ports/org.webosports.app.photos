@@ -21,6 +21,7 @@ import QtQuick.Controls
 import QtQuick.Controls.LuneOS 2.0
 
 import LunaNext.Common 0.1
+import LuneOS.Components 1.0 as LC
 
 import "components"
 import "js/Library.js" as Library
@@ -97,7 +98,7 @@ Rectangle {
             id: column
             width: list.width
 
-            Divider {
+            LC.SectionDivider {
                 text: "LIBRARIES"
                 open: panel.librariesOpen
                 onClicked: panel.librariesOpen = !panel.librariesOpen
@@ -125,7 +126,7 @@ Rectangle {
                     }
                 }
             }
-            Divider {
+            LC.SectionDivider {
                 text: appWindow.wide || appWindow.source === "all" ? "ALL ALBUMS" : appWindow.sourceTitle.toUpperCase()
             }
             Label {
@@ -184,118 +185,14 @@ Rectangle {
         }
     }
 
-    component Divider: Rectangle {
-        id: divider
-        property alias text: dividerLabel.text
-        property bool open: true
-        signal clicked()
-        width: parent ? parent.width : 0
-        height: Units.gu(4)
-        color: "#1f1f1f"
-        Label {
-            id: dividerLabel
-            anchors.left: parent.left
-            anchors.leftMargin: Units.gu(1.5)
-            anchors.verticalCenter: parent.verticalCenter
-            color: "#a0a0a0"
-            font.bold: true
-            font.pixelSize: FontUtils.sizeToPixels("small")
-        }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: divider.clicked()
-        }
-    }
-
-    component PanelRow: ItemDelegate {
+    // A library or an album: an album shows its cover, or the generic album
+    component PanelRow: LC.IconListRow {
         id: row
-        property string title
-        property string subtitle
-        property url iconSource
         property var coverItem: null
-        property url badge
-        property bool busy: false
-        property bool selected: false
-
-        width: parent ? parent.width : 0
-        height: Units.gu(7)
-        padding: 0
-        background: Rectangle {
-            color: row.pressed ? "#333333" : (row.selected ? "#3c4a57" : "transparent")
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 1
-                color: "#1a1a1a"
-            }
-        }
-        contentItem: Item {
-            Item {
-                id: picture
-                anchors.left: parent.left
-                anchors.leftMargin: Units.gu(1.5)
-                anchors.verticalCenter: parent.verticalCenter
-                width: Units.gu(5)
-                height: width
-
-                Image {
-                    anchors.fill: parent
-                    anchors.margins: Units.gu(0.5)
-                    visible: row.coverItem === null
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-                    source: row.iconSource.toString() !== "" ? row.iconSource : Images.url("icon_album_thumbnail_generic", Units.gridUnit)
-                }
-                Thumbnail {
-                    anchors.fill: parent
-                    visible: row.coverItem !== null
-                    item: row.coverItem
-                }
-                Image {
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.margins: -Units.gu(0.4)
-                    width: Units.gu(2.2)
-                    height: width
-                    visible: row.badge.toString() !== ""
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-                    source: row.badge
-                }
-            }
-            Column {
-                anchors.left: picture.right
-                anchors.leftMargin: Units.gu(1.5)
-                anchors.right: spinner.left
-                anchors.rightMargin: Units.gu(1)
-                anchors.verticalCenter: parent.verticalCenter
-                Label {
-                    width: parent.width
-                    text: row.title
-                    color: "white"
-                    elide: Text.ElideRight
-                    font.pixelSize: FontUtils.sizeToPixels("medium")
-                }
-                Label {
-                    width: parent.width
-                    visible: text !== ""
-                    text: row.subtitle
-                    color: "#9a9a9a"
-                    elide: Text.ElideRight
-                    font.pixelSize: FontUtils.sizeToPixels("small")
-                }
-            }
-            BusyIndicator {
-                id: spinner
-                objectName: "syncSpinner"
-                anchors.right: parent.right
-                anchors.rightMargin: Units.gu(1)
-                anchors.verticalCenter: parent.verticalCenter
-                width: row.busy ? Units.gu(3.5) : 0
-                height: Units.gu(3.5)
-                running: row.busy
-                visible: row.busy
-            }
+        iconSource: Images.url("icon_album_thumbnail_generic", Units.gridUnit)
+        picture: coverItem !== null ? cover : null
+        property Component cover: Component {
+            Thumbnail { item: row.coverItem }
         }
     }
 }
