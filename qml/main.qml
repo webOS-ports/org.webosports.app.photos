@@ -205,7 +205,7 @@ WebOSWindow {
     // "Add to Album": the albums pictures can go into, and a new one.
     function chooseAlbum(items, sourceAlbumId) {
         if (items.length === 0) {
-            confirmDialog.ask("No items selected", "No items selected for adding to album.", "OK", false, null);
+            confirmDialog.ask({ title: "No items selected", message: "No items selected for adding to album.", rejectText: "" });
             return;
         }
         var hasVideo = items.some(function(i) { return i.mediaType === "video"; });
@@ -227,41 +227,40 @@ WebOSWindow {
     }
 
     function askNewAlbum(specs) {
-        nameDialog.ask("New Album", "", "Create Album", function(name) {
-            photoStore.createAlbum(name, specs || []);
-        });
+        nameDialog.ask({ title: "New Album", acceptText: "Create Album", valid: Library.validAlbumName,
+                         onAccepted: function(name) { photoStore.createAlbum(name.trim(), specs || []); } });
     }
 
     function askRename(album) {
         if (!Library.canRename(album))
             return;
-        nameDialog.ask("Rename Album", album.title, "Rename", function(name) {
-            photoStore.renameAlbum(album._id, name);
-        });
+        nameDialog.ask({ title: "Rename Album", text: album.title, acceptText: "Rename", valid: Library.validAlbumName,
+                         onAccepted: function(name) { photoStore.renameAlbum(album._id, name.trim()); } });
     }
 
     function askDeleteAlbum(album) {
-        confirmDialog.ask("Delete Album", "Are you sure you want to delete this album?", "Delete Album", true,
-                          function() { photoStore.deleteAlbum(album._id); });
+        confirmDialog.ask({ title: "Delete Album", message: "Are you sure you want to delete this album?",
+                            acceptText: "Delete Album", destructive: true,
+                            onAccepted: function() { photoStore.deleteAlbum(album._id); } });
     }
 
     // Pictures and videos of an album, after asking.
     function askDelete(items, album, selection, done) {
         if (items.length === 0) {
-            confirmDialog.ask("No items selected", "No items selected for deletion.", "OK", false, null);
+            confirmDialog.ask({ title: "No items selected", message: "No items selected for deletion.", rejectText: "" });
             return;
         }
         var videos = items.filter(function(i) { return i.mediaType === "video"; }).length;
         var cloud = items.some(function(i) { return Library.isCloud(i); });
-        confirmDialog.ask("Delete", Library.deleteMessage(items.length - videos, videos, cloud), "Delete", true,
-                          function() {
+        confirmDialog.ask({ title: "Delete", message: Library.deleteMessage(items.length - videos, videos, cloud),
+                            acceptText: "Delete", destructive: true, onAccepted: function() {
             var albumKey = album ? album._id : "";
             var spec = selection && !(album && album.virtual) ? Library.spec(selection, albumKey)
                                                               : Library.specForIds(items.map(function(i) { return i._id; }), albumKey);
             photoStore.deletePhotos([spec]);
             if (done)
                 done();
-        });
+        } });
     }
 
     // Email, the only way webOS 3.0 shared a picture.
@@ -298,18 +297,26 @@ WebOSWindow {
         z: 50
     }
 
-    ConfirmSheet {
+    // Asks before what cannot be undone; a notice has one button
+    LC.ConfirmDialog {
         id: confirmDialog
         objectName: "confirmDialog"
         anchors.fill: parent
         z: 60
+        visible: false
+        dialogHeight: Units.gu(22)
+        dialogWidth: Math.min(Units.gu(34), parent ? parent.width - Units.gu(2) : Units.gu(34))
     }
 
-    NameDialog {
+    // An album's name, new or renamed
+    LC.PromptDialog {
         id: nameDialog
         objectName: "nameDialog"
         anchors.fill: parent
         z: 60
+        visible: false
+        dialogHeight: Units.gu(20)
+        dialogWidth: Math.min(Units.gu(34), parent ? parent.width - Units.gu(2) : Units.gu(34))
     }
 
     Printer {
@@ -583,12 +590,12 @@ WebOSWindow {
     function handleBack() {
         if (sheet.back())
             return true;
-        if (confirmDialog.isOpen) {
-            confirmDialog.cancel();
+        if (confirmDialog.opened) {
+            confirmDialog.rejected();
             return true;
         }
-        if (nameDialog.isOpen) {
-            nameDialog.cancel();
+        if (nameDialog.opened) {
+            nameDialog.reject();
             return true;
         }
         if (slideshowView.isOpen) {

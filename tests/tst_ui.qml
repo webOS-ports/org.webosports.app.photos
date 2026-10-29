@@ -196,10 +196,15 @@ TestCase {
         fail("no choice " + label + " in " + JSON.stringify(app.sheet.choices.map(function(c) { return c.label; })));
     }
 
+    // The dialog's button, tapped
     function accept(dialog) {
-        verify(dialog.isOpen, "dialog open");
-        dialog.accepted();
-        wait(20);
+        verify(dialog.opened, "dialog open");
+        tap(findChild(dialog, dialog === app.nameDialog ? "promptAcceptButton" : "confirmAcceptButton"));
+    }
+    function cancel(dialog) {
+        verify(dialog.opened, "dialog open");
+        tap(findChild(dialog, dialog === app.nameDialog ? "promptRejectButton" : "confirmRejectButton"));
+        verify(!dialog.opened);
     }
 
     function test_01_sources() {
@@ -254,15 +259,15 @@ TestCase {
         startApp();
         openAlbum("alb-holiday");
         tap(find("renameArea"));
-        verify(app.nameDialog.isOpen);
+        verify(app.nameDialog.opened);
         compare(app.nameDialog.text, "Holiday");
         app.nameDialog.text = "   ";
-        app.nameDialog.accept();
-        verify(app.nameDialog.isOpen, "an empty name is not taken");
+        accept(app.nameDialog);
+        verify(app.nameDialog.opened, "an empty name is not taken");
         app.nameDialog.text = "Summer 2026";
         shot("rename");
-        app.nameDialog.accept();
-        verify(!app.nameDialog.isOpen);
+        accept(app.nameDialog);
+        verify(!app.nameDialog.opened);
         compare(photos("renameAlbum"), { albumId: "alb-holiday", newName: "Summer 2026" });
         // Not the camera's album, not a cloud one.
         openAlbum("alb-camera");
@@ -275,10 +280,10 @@ TestCase {
     function test_04_newAlbum() {
         startApp();
         tap(find("newAlbumButton"));
-        verify(app.nameDialog.isOpen);
+        verify(app.nameDialog.opened);
         compare(app.nameDialog.title, "New Album");
         app.nameDialog.text = "Trip";
-        app.nameDialog.accept();
+        accept(app.nameDialog);
         compare(photos("createAlbum"), { name: "Trip", accountId: "local" });
         // From the app menu too.
         app.openAppMenu();
@@ -357,6 +362,7 @@ TestCase {
         tap(find("deleteSelectedButton"));
         compare(app.confirm.title, "No items selected");
         compare(app.confirm.message, "No items selected for deletion.");
+        compare(findChild(app.confirm, "confirmRejectButton"), null, "a notice, with one button");
         accept(app.confirm);
         tap(find("addToAlbumButton"));
         compare(app.confirm.message, "No items selected for adding to album.");
@@ -393,9 +399,9 @@ TestCase {
         labels = app.sheet.choices.map(function(c) { return c.label; });
         verify(labels.indexOf("Camera Uploads") < 0);
         choose("Create New Album");
-        verify(app.nameDialog.isOpen);
+        verify(app.nameDialog.opened);
         app.nameDialog.text = "Best";
-        app.nameDialog.accept();
+        accept(app.nameDialog);
         var c = photos("createAlbum");
         compare(c.name, "Best");
         compare(c.specs[0].photos.sort(), ["vid-h"]);
@@ -410,15 +416,15 @@ TestCase {
         tap(find("deleteSelectedButton"));
         compare(app.confirm.message, "This permanently deletes the photo from your cloud account. It can't be undone.");
         shot("cloud-delete");
-        app.confirm.cancel();
-        verify(!app.confirm.isOpen);
+        cancel(app.confirm);
+        verify(!app.confirm.opened);
         // A device album never says so.
         openAlbum("alb-camera");
         tap(find("selectButton"));
         mouseClick(find("itemGrid").itemAtIndex(1));
         tap(find("deleteSelectedButton"));
         compare(app.confirm.message, "Are you sure you want to delete this image?");
-        app.confirm.cancel();
+        cancel(app.confirm);
     }
 
     function test_09_picture() {
@@ -533,7 +539,7 @@ TestCase {
         verify(app.picture.isOpen);
         tap(find("deleteButton"));
         compare(app.confirm.message, "This permanently deletes the photo from your cloud account. It can't be undone.");
-        app.confirm.cancel();
+        cancel(app.confirm);
     }
 
     function test_12_video() {
