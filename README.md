@@ -105,8 +105,9 @@ parameters:
 ## Depends on
 
 - [luneos-components](https://github.com/webOS-ports/luneos-components):
-  `LuneOS.Components`, the LuneOS Qt Quick Controls style, and on a
-  development machine its QML stand-ins for the C++ plugins.
+  `LuneOS.Components`, `LuneOS.Forms`, `LuneOS.System`, the LuneOS Qt
+  Quick Controls style, and on a development machine its QML stand-ins
+  for the C++ plugins.
 - `com.palm.service.photos` (app-services) for the cloud albums, with the
   cloud connectors of
   [luneos-synergy-connectors](https://github.com/webOS-ports/luneos-synergy-connectors)
@@ -218,8 +219,9 @@ again:
 A picture is drawn at its SVG's own size at grid unit 10 (the TouchPad,
 webOS's own scale), the legacy pixel size, unless `artwork/sizes` gives
 another; `2x/` and `3x/` are twice and three times that, and
-`qml/js/Images.js` picks the smallest set that is not too small for the
-screen, so a picture is only ever made smaller. Both scripts draw with
+`qml/js/Images.js` picks, with luneos-components' ArtworkScale, the
+smallest set that is not too small for the screen, so a picture is only
+ever made smaller. Both scripts draw with
 Qt's own SVG renderer, filters included. After changing an SVG, run
 `tools/make-images.sh` and commit the PNGs with it.
 
