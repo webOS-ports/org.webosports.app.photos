@@ -316,4 +316,83 @@ TestCase {
         verify(Images.hasPressed("icn-delete"));
         verify(!Images.hasPressed("icn-more"), "icn-more has no pressed state");
     }
+
+    function treeLib(extraAlbums) {
+        Fixtures.ROOT = "/r";
+        return Library.build(Fixtures.albums().concat(Fixtures.treeAlbums()).concat(extraAlbums || []),
+                             Fixtures.images().concat(Fixtures.treeImages()), Fixtures.videos(), "/r/pictures");
+    }
+
+    function test_subAlbums() {
+        var lib = treeLib();
+        var ids = function(list) { return list.map(function(a) { return a._id; }); };
+        compare(lib.byId["alb-pg-holidays"].parent, "");
+        compare(lib.byId["alb-pg-italy"].parent, "alb-pg-holidays");
+        compare(lib.byId["alb-pg-rome"].parent, "alb-pg-italy");
+        compare(lib.byId["alb-holiday"].parent, "", "a device album: no parent");
+        compare(ids(Library.childrenOf(lib, "alb-pg-holidays")), ["alb-pg-italy", "alb-pg-alps"], "by title, as folders");
+        compare(ids(Library.childrenOf(lib, "alb-pg-rome")), []);
+        compare(lib.byId["alb-pg-holidays"].subAlbums, 2);
+        compare(lib.byId["alb-pg-italy"].subAlbums, 1);
+        compare(lib.byId["alb-pg-rome"].subAlbums, 0);
+        // The library shows the top ones; the slideshow and the counts keep them all
+        var top = ids(Library.topLevel(lib.albums));
+        verify(top.indexOf("alb-pg-holidays") >= 0);
+        verify(top.indexOf("alb-pg-italy") < 0 && top.indexOf("alb-pg-rome") < 0);
+        compare(top.length, lib.albums.length - 3);
+        compare(Library.albumsOf(lib.albums, "acc-pg2").length, 4);
+        compare(ids(Library.topLevel(Library.albumsOf(lib.albums, "acc-pg2"))), ["alb-pg-holidays"]);
+        // Up and down the tree
+        compare(ids(Library.ancestors(lib, "alb-pg-rome")), ["alb-pg-italy", "alb-pg-holidays"]);
+        compare(ids(Library.ancestors(lib, "alb-pg-holidays")), []);
+        compare(Library.descendantIds(lib, "alb-pg-holidays"), ["alb-pg-italy", "alb-pg-rome", "alb-pg-alps"], "in the order shown");
+        compare(Library.descendantIds(lib, "alb-holiday"), []);
+        verify(Library.isWithin(lib, "alb-pg-rome", "alb-pg-holidays"));
+        verify(Library.isWithin(lib, "alb-pg-rome", "alb-pg-rome"));
+        verify(!Library.isWithin(lib, "alb-pg-holidays", "alb-pg-rome"));
+        verify(!Library.isWithin(lib, "", "alb-pg-rome"));
+        compare(Library.pathTitle(lib, lib.byId["alb-pg-rome"]), "Holidays \u203a 2025 Italy \u203a Rome");
+        compare(Library.pathTitle(lib, lib.byId["alb-holiday"]), "Holiday");
+        // An album with only albums in it: their cover, and what it holds
+        compare(lib.byId["alb-pg-holidays"].cover._id, "img-pg-italy", "the first sub-album's cover");
+        compare(Library.countLabel(lib.byId["alb-pg-holidays"]), "2 albums");
+        compare(Library.countLabel(lib.byId["alb-pg-italy"]), "1 image, 1 album");
+        compare(Library.countLabel(lib.byId["alb-pg-rome"]), "1 image");
+        compare(Library.countLabel({ images: 0, videos: 0, subAlbums: 1 }), "1 album");
+        compare(Library.countLabel({ images: 0, videos: 0 }), "0 images", "as before");
+        compare(Library.countParts({ images: 3, videos: 2, subAlbums: 1 }), ["3 images", "2 videos", "1 album"]);
+        compare(Library.countParts({ images: 0, videos: 0, subAlbums: 2 }), ["2 albums"]);
+        compare(Library.countParts(null), []);
+        // Its slideshow plays theirs
+        compare(Library.slideshowPlaylist(lib, ["alb-pg-holidays"].concat(Library.descendantIds(lib, "alb-pg-holidays")))
+                .map(function(i) { return i._id; }), ["img-pg-italy", "img-pg-rome", "img-pg-alps"]);
+    }
+
+    function test_subAlbumsThatCannotBe() {
+        var odd = function(id, parentId, extra) {
+            var a = { _id: id, path: "/media/internal/.photosApp/x/" + id, name: id, accountId: "acc-pg2",
+                      type: "com.palm.pigallery2", parentId: parentId, showAlbum: true, modifiedTime: 1 };
+            for (var k in (extra || {}))
+                a[k] = extra[k];
+            return a;
+        };
+        var lib = treeLib([
+            odd("self", "self"),
+            odd("loopA", "loopB"), odd("loopB", "loopA"), odd("belowLoop", "loopA"),
+            odd("lost", "no-such-album"),
+            odd("otherAccount", "alb-dropbox"),
+            odd("inDevice", "alb-holiday"),
+            odd("hiddenChild", "alb-hidden"),
+            odd("notString", 5),
+            odd("dropboxInPg", "alb-pg-holidays", { accountId: "acc-dropbox", type: "com.palm.dropbox" })
+        ]);
+        ["self", "loopA", "loopB", "belowLoop", "lost", "otherAccount", "inDevice", "hiddenChild", "notString", "dropboxInPg"].forEach(function(id) {
+            compare(lib.byId[id].parent, "", id + ": at the top");
+        });
+        compare(Library.childrenOf(lib, "loopA").length, 0);
+        compare(Library.descendantIds(lib, "loopA"), []);
+        compare(Library.ancestors(lib, "belowLoop"), []);
+        compare(lib.byId["alb-pg-holidays"].subAlbums, 2, "an album of another account is not counted in");
+        compare(lib.byId["self"].cover, null);
+    }
 }

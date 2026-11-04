@@ -180,6 +180,13 @@ WebOSWindow {
         albumId = id;
     }
 
+    // Back from an album: to the album it is in, else to the library.
+    function closeAlbum() {
+        var a = photoStore.album(albumId);
+        albumView.cancelSelection();
+        albumId = a && a.parent ? a.parent : "";
+    }
+
     function openPicture(albumIdToShow, itemId, autoPlay) {
         if (albumIdToShow)
             albumId = albumIdToShow;
@@ -197,8 +204,14 @@ WebOSWindow {
         slideshowView.start(list, startItemId || "", false);
     }
 
+    // The library's albums, sub-albums too (what its slideshow plays)
     function libraryAlbums() {
         return Library.albumsOf(photoStore.lib.albums, source);
+    }
+
+    // The ones it shows: those in no other album
+    function libraryTopAlbums() {
+        return Library.topLevel(libraryAlbums());
     }
 
     // --- dialogs ------------------------------------------------------------------
@@ -211,7 +224,7 @@ WebOSWindow {
         }
         var hasVideo = items.some(function(i) { return i.mediaType === "video"; });
         var choices = Library.targetAlbums(photoStore.lib.albums, sourceAlbumId, hasVideo).map(function(a) {
-            return { label: a.title, key: a._id };
+            return { label: Library.pathTitle(photoStore.lib, a), key: a._id };
         });
         choices.unshift({ label: "Create New Album", key: "" });
         var ids = items.map(function(i) { return i._id; });
@@ -555,7 +568,7 @@ WebOSWindow {
         if (albumView.handleBack())
             return true;
         if (albumId !== "") {
-            albumId = "";
+            closeAlbum();
             return true;
         }
         if (source !== "all" && wide) {

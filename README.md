@@ -45,6 +45,15 @@ down and sends additions and deletions back up.
 | ![Library](docs/screenshots/q25-library.jpg) | ![Albums](docs/screenshots/q25-albums.jpg) | ![Album](docs/screenshots/q25-album.jpg) | ![Picture](docs/screenshots/q25-picture.jpg) |
 | Libraries | and albums, scrolled | An album | A picture |
 
+| Pixel 3a (1080x2220), sub-albums | | | |
+|:---:|:---:|:---:|:---:|
+| ![Library](docs/screenshots/sargo-subalbums-library.jpg) | ![Family](docs/screenshots/sargo-subalbums-family.jpg) | ![Holidays](docs/screenshots/sargo-subalbums-holidays.jpg) | ![2024 Norway](docs/screenshots/sargo-subalbums-norway.jpg) |
+| Libraries: the top folders of a PiGallery2 account | An album of only albums | Albums with pictures and albums in them | A row of sub-albums above the pictures |
+
+The Pixel 3a pictures are a PiGallery2 3.5.2 test gallery's, taken on the
+device; the rest of its walk down the tree (`sargo-subalbums-*.jpg`) is in
+`docs/screenshots/` too.
+
 Each device's slideshow and exhibition are in `docs/screenshots/` too.
 The pictures are LuneOS's default wallpapers, made into a demo library;
 `tools/screenshots-host.sh` takes all of these again (see below).
@@ -72,6 +81,11 @@ The pictures are LuneOS's default wallpapers, made into a demo library;
 **Albums**
 
 - A grid of pictures and videos, newest first; a video with its length.
+- **Sub-albums**: a cloud account's folders in folders (PiGallery2's) are
+  shown inside their album, as a row above its pictures, or as the page
+  when it has only sub-albums; back goes up one album at a time. The
+  library and the panel show the top ones; an album's slideshow plays
+  its sub-albums' pictures too.
 - Select (one by one, all, none) to **add to another album** - a device
   album, or a cloud album, which uploads them - or to **delete**, from a
   cloud account as well.

@@ -81,4 +81,34 @@ function videos() {
     ];
 }
 
+/*
+ * A PiGallery2 account's folders as the photos service writes them, each
+ * with its album's _id as parentId: Holidays (only folders in it) > 2025
+ * Italy (a picture) > Rome (a picture), and Alps (a picture) in Holidays.
+ * Added to the others where a test wants sub-albums.
+ */
+function treeAlbums() {
+    var dir = "/media/internal/.photosApp/com.palm.pigallery2/jane@gallery/";
+    function album(id, name, parentId, images, time) {
+        return { _id: id, path: dir + name, name: name, accountId: "acc-pg2", type: "com.palm.pigallery2",
+                 aid: name, parentId: parentId, showAlbum: true, modifiedTime: time, total: { images: images } };
+    }
+    return [
+        album("alb-pg-holidays", "Holidays", "", 0, 1791600000),
+        album("alb-pg-italy", "2025 Italy", "alb-pg-holidays", 1, 1791600001),
+        album("alb-pg-rome", "Rome", "alb-pg-italy", 1, 1791600002),
+        album("alb-pg-alps", "Alps", "alb-pg-holidays", 1, 1791600003)
+    ];
+}
+
+function treeImages() {
+    function image(id, albumId, time) {
+        return { _id: id, albumId: albumId, path: ROOT + "/pictures/cloud/IMG_0001.jpg", mediaType: "image",
+                 type: "com.palm.pigallery2", accountId: "acc-pg2", createdTime: time, appCacheComplete: true,
+                 "com.palm.pigallery2": { pid: id } };
+    }
+    return [image("img-pg-italy", "alb-pg-italy", 1791600010), image("img-pg-rome", "alb-pg-rome", 1791600020),
+            image("img-pg-alps", "alb-pg-alps", 1791600030)];
+}
+
 var ROOT = "";

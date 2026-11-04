@@ -53,7 +53,7 @@ Item {
     // The device, in the libraries panel (webOS: "My TouchPad").
     property string deviceName: "My Device"
 
-    // { albums, byId, items, byItemId } (js/Library.js build())
+    // { albums, byId, items, byItemId, children } (js/Library.js build())
     property var lib: Library.build([], [], [])
     // Bumped whenever lib changes; views rebuild on it.
     property int revision: 0
@@ -240,6 +240,11 @@ Item {
 
     function itemsOf(albumId) {
         return lib.items[albumId] || [];
+    }
+
+    // The albums in an album (a cloud folder's folders)
+    function childrenOf(albumId) {
+        return Library.childrenOf(lib, albumId);
     }
 
     function item(id) {
