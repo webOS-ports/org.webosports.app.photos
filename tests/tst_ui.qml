@@ -788,4 +788,78 @@ TestCase {
         // broken.jpg does not load: new thumbnails are asked for, once.
         tryVerify(function() { return bus.callsTo("luna://com.palm.service.photos/generateThumbnails").length >= 2; }, 4000);
     }
+
+    // A PiGallery2 account's folders: the library shows the top one, an
+    // album its sub-albums (the whole page, or a row above its pictures),
+    // and back goes up one album at a time.
+    function test_19_subAlbums() {
+        startApp();
+        app.store.setEntries(Fixtures.albums().concat(Fixtures.treeAlbums()),
+                             Fixtures.images().concat(Fixtures.treeImages()), Fixtures.videos());
+        var list = find("albumList");
+        tryVerify(function() { return list.count === 7; }, 2000, "the six, and Holidays without its sub-albums");
+        verify(findChild(app.contentItem, "album-alb-pg-holidays") !== null);
+        compare(findChild(app.contentItem, "album-alb-pg-italy"), null);
+        if (app.wide) {
+            var grid = find("albumGrid");
+            compare(grid.count, 7);
+        }
+
+        // The panel lays its rows out again first
+        waitForItemPolished(find("album-alb-pg-holidays").parent);
+        tap(find("album-alb-pg-holidays"));
+        compare(app.albumId, "alb-pg-holidays");
+        compare(find("albumCounts").text, "2 albums");
+        var subs = find("subAlbumGrid");
+        compare(subs.count, 2);
+        compare(findChild(app.albumView, "itemGrid"), null, "no pictures of its own");
+        compare(findChild(app.albumView, "emptyAlbum"), null, "and not empty");
+        compare(findChild(app.albumView, "selectButton"), null, "nothing to select");
+        verify(find("albumSlideshowButton").visible, "its sub-albums' pictures play");
+        wait(200);
+        shot("subalbums");
+
+        tap(find("albumCell-alb-pg-italy"));
+        compare(app.albumId, "alb-pg-italy");
+        compare(find("albumTitle").text, "2025 Italy");
+        compare(find("albumCounts").text, "1 image, 1 album");
+        var row = find("subAlbumRow");
+        compare(row.count, 1);
+        compare(find("itemGrid").count, 1);
+        verify(find("albumBackButton").visible, "a way back to Holidays, on a tablet too");
+        if (app.wide)
+            verify(find("album-alb-pg-holidays").selected, "the panel shows where it is");
+        wait(200);
+        shot("subalbum-row");
+
+        // Selecting hides the row: only the pictures are picked
+        tap(find("selectButton"));
+        compare(findChild(app.albumView, "subAlbumRow"), null);
+        tap(find("cancelSelectButton"));
+        verify(find("subAlbumRow").visible);
+
+        tap(find("albumCell-alb-pg-rome"));
+        compare(app.albumId, "alb-pg-rome");
+        compare(findChild(app.albumView, "subAlbumRow"), null);
+        back();
+        compare(app.albumId, "alb-pg-italy");
+        tap(find("albumBackButton"));
+        compare(app.albumId, "alb-pg-holidays");
+
+        tap(find("albumSlideshowButton"));
+        tryVerify(function() { return app.slideshow.isOpen; });
+        compare(app.slideshow.playlist.map(function(i) { return i._id; }), ["img-pg-italy", "img-pg-rome", "img-pg-alps"]);
+        back();
+        tryVerify(function() { return !app.slideshow.isOpen; });
+
+        back();
+        compare(app.albumId, "", "out of the top album: the library");
+        compare(quits, 0);
+
+        // A sub-album that goes (its folder deleted on the server) while open: back to the library
+        app.openAlbum("alb-pg-rome");
+        app.store.setEntries(Fixtures.albums().concat(Fixtures.treeAlbums().slice(0, 2)),
+                             Fixtures.images().concat(Fixtures.treeImages()), Fixtures.videos());
+        tryCompare(app, "albumId", "");
+    }
 }

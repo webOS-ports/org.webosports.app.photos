@@ -31,6 +31,10 @@
  * video goes to the album of its folder; videos in a folder without
  * pictures make an album of their own here ("video:<folder>"), which only
  * the app knows of.
+ *
+ * A cloud album can be in another album of its account (a folder in a
+ * folder): the photos service gives it that album's _id as parentId. Such
+ * a sub-album is shown inside its album, not among the library's.
  */
 
 var cameraAlbumPath = "camera://";
@@ -149,6 +153,11 @@ function compareItems(a, b) {
     return pa < pb ? -1 : (pa > pb ? 1 : 0);
 }
 
+function compareTitles(a, b) {
+    var ta = albumTitle(a).toLowerCase(), tb = albumTitle(b).toLowerCase();
+    return ta < tb ? -1 : (ta > tb ? 1 : 0);
+}
+
 function compareAlbums(a, b) {
     var d = (b.modifiedTime || 0) - (a.modifiedTime || 0);
     if (d !== 0)
@@ -160,9 +169,14 @@ function compareAlbums(a, b) {
 /*
  * The library from the db8 entries:
  *   { albums: [album...], byId: { id: album }, items: { albumId: [item...] },
- *     byItemId: { id: item } }
- * Each album gets images, videos (counts), cover (its newest item) and
- * title; albums with showAlbum false are left out, as webOS did.
+ *     byItemId: { id: item }, children: { albumId: [album...] } }
+ * Each album gets images, videos (counts), cover (its newest item, else
+ * its first sub-album's), title, parent (its album's _id, or "") and
+ * subAlbums (how many are in it); albums with showAlbum false are left
+ * out, as webOS did. A sub-album's album has to be there, shown, of the
+ * same account; one that is not, or a chain of them that comes back on
+ * itself, leaves it at the top. Sub-albums are in title order, as the
+ * folders they are.
  */
 function build(albumEntries, imageEntries, videoEntries, root) {
     var albums = [];
@@ -242,7 +256,102 @@ function build(albumEntries, imageEntries, videoEntries, root) {
         a.title = albumTitle(a);
     });
     albums.sort(compareAlbums);
-    return { albums: albums, byId: byId, items: items, byItemId: byItemId };
+    var children = linkAlbums(albums, byId);
+    return { albums: albums, byId: byId, items: items, byItemId: byItemId, children: children };
+}
+
+// The parent each album can have (see build), its sub-albums, and the
+// covers of albums with only sub-albums.
+function linkAlbums(albums, byId) {
+    function parentOf(a) {
+        var p = typeof a.parentId === "string" && a.parentId !== "" ? byId[a.parentId] : null;
+        return p && p !== a && isCloud(p) && p.accountId === a.accountId ? p : null;
+    }
+    var children = {};
+    albums.forEach(function(a) {
+        var parent = parentOf(a);
+        var seen = {};
+        seen[a._id] = true;
+        for (var p = parent; p; p = parentOf(p)) {
+            if (seen[p._id]) {
+                parent = null;
+                break;
+            }
+            seen[p._id] = true;
+        }
+        a.parent = parent ? parent._id : "";
+        a.subAlbums = 0;
+    });
+    albums.forEach(function(a) {
+        if (a.parent === "")
+            return;
+        if (!children[a.parent])
+            children[a.parent] = [];
+        children[a.parent].push(a);
+        byId[a.parent].subAlbums++;
+    });
+    for (var id in children)
+        children[id].sort(compareTitles);
+    function cover(a, depth) {
+        if (a.cover || depth > albums.length)
+            return a.cover;
+        var kids = children[a._id] || [];
+        for (var i = 0; i < kids.length && !a.cover; i++)
+            a.cover = cover(kids[i], depth + 1);
+        return a.cover;
+    }
+    albums.forEach(function(a) { cover(a, 0); });
+    return children;
+}
+
+// Albums that are in no other album.
+function topLevel(albums) {
+    return (albums || []).filter(function(a) { return !a.parent; });
+}
+
+function childrenOf(lib, albumId) {
+    return (lib && lib.children && lib.children[albumId]) || [];
+}
+
+// The albums an album is in, its own first: [parent, grandparent, ...].
+function ancestors(lib, albumId) {
+    var out = [];
+    var a = lib && lib.byId[albumId];
+    while (a && a.parent && out.length < lib.albums.length) {
+        a = lib.byId[a.parent];
+        out.push(a);
+    }
+    return out;
+}
+
+// Whether album albumId is ancestorId or inside it.
+function isWithin(lib, albumId, ancestorId) {
+    if (!albumId || !ancestorId)
+        return false;
+    if (albumId === ancestorId)
+        return true;
+    return ancestors(lib, albumId).some(function(a) { return a._id === ancestorId; });
+}
+
+// An album's sub-albums, theirs, and so on: their ids, in the order shown.
+function descendantIds(lib, albumId) {
+    var out = [];
+    var todo = childrenOf(lib, albumId).slice();
+    while (todo.length > 0 && out.length < lib.albums.length) {
+        var a = todo.shift();
+        out.push(a._id);
+        todo = childrenOf(lib, a._id).concat(todo);
+    }
+    return out;
+}
+
+// "Holidays › 2025 Italy": an album's title after those of the albums it is in.
+function pathTitle(lib, album) {
+    if (!album)
+        return "";
+    var titles = ancestors(lib, album._id).map(function(a) { return a.title; }).reverse();
+    titles.push(album.title);
+    return titles.join(" \u203a ");
 }
 
 function copyItem(e, mediaType) {
@@ -336,14 +445,21 @@ function videosLabel(n) {
     return plural(n, "1 video", "#{num} videos");
 }
 
+function albumsLabel(n) {
+    return plural(n, "1 album", "#{num} albums");
+}
+
 function countLabel(album) {
     if (!album)
         return "";
     var parts = [];
-    if (album.images > 0 || album.videos === 0)
+    var subs = album.subAlbums || 0;
+    if (album.images > 0 || (album.videos === 0 && subs === 0))
         parts.push(imagesLabel(album.images));
     if (album.videos > 0)
         parts.push(videosLabel(album.videos));
+    if (subs > 0)
+        parts.push(albumsLabel(subs));
     return parts.join(", ");
 }
 

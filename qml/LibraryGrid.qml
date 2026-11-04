@@ -27,14 +27,16 @@ import "js/Library.js" as Library
 
 /*
  * A library's albums as a grid (webOS's LibraryMode): all of them, or the
- * device's, or one account's. Slideshow plays every album with pictures.
+ * device's, or one account's; sub-albums are in their albums. Slideshow
+ * plays every album with pictures, sub-albums too.
  */
 Rectangle {
     id: page
     objectName: "libraryGrid"
 
     readonly property var store: appWindow.store
-    readonly property var albums: { store.revision; return appWindow.libraryAlbums(); }
+    // Those in no other album: a sub-album is in its album
+    readonly property var albums: { store.revision; return appWindow.libraryTopAlbums(); }
 
     color: "#1a1a1a"
 
@@ -86,69 +88,10 @@ Rectangle {
         cellHeight: cellWidth * 0.75 + Units.gu(5)
         boundsBehavior: Flickable.StopAtBounds
 
-        delegate: ItemDelegate {
-            objectName: "albumCell-" + modelData._id
+        delegate: AlbumCell {
             width: grid.cellWidth
             height: grid.cellHeight
-            padding: Units.gu(0.8)
-            background: Rectangle {
-                radius: Units.gu(0.6)
-                color: parent.pressed ? "#333333" : "transparent"
-            }
-            onClicked: appWindow.openAlbum(modelData._id)
-            contentItem: Column {
-                spacing: Units.gu(0.5)
-                Item {
-                    width: parent.width
-                    height: (grid.cellWidth - Units.gu(1.6)) * 0.75
-                    // A stack of prints, as webOS drew an album.
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: Units.gu(0.4)
-                        rotation: -4
-                        color: "#d8d8d8"
-                        antialiasing: true
-                        visible: modelData.images + modelData.videos > 1
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: Units.gu(0.4)
-                        color: "#f2f2f2"
-                        antialiasing: true
-                        Thumbnail {
-                            anchors.fill: parent
-                            anchors.margins: Units.gu(0.4)
-                            item: modelData.cover
-                        }
-                    }
-                    Image {
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        width: Units.gu(2.6)
-                        height: width
-                        visible: Library.isCloud(modelData)
-                        fillMode: Image.PreserveAspectFit
-                        sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
-                        source: visible ? appWindow.libraryIcon({ accountId: modelData.accountId, templateId: modelData.type }) : ""
-                    }
-                }
-                Label {
-                    width: parent.width
-                    text: modelData.title
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    font.pixelSize: FontUtils.sizeToPixels("medium")
-                }
-                Label {
-                    width: parent.width
-                    text: Library.countLabel(modelData)
-                    color: "#9a9a9a"
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    font.pixelSize: FontUtils.sizeToPixels("small")
-                }
-            }
+            album: modelData
         }
     }
 

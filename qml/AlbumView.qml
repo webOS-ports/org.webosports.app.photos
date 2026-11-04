@@ -32,6 +32,10 @@ import "js/Images.js" as Images
  * it offers Add Photos and Delete Album. The select button picks pictures
  * to add to another album or delete; Select All picks all but those then
  * tapped, which the photos service is told as such ("exclude").
+ *
+ * The albums in it (a cloud folder's folders) are a row above its
+ * pictures, or, when it has none of its own, the whole page. One tapped
+ * opens; back is to this one. Its slideshow plays theirs too.
  */
 Rectangle {
     id: view
@@ -40,7 +44,19 @@ Rectangle {
     property var album: null
     readonly property var store: appWindow.store
     readonly property var items: { store.revision; return album ? store.itemsOf(album._id) : []; }
-    readonly property bool empty: album !== null && items.length === 0
+    readonly property var subAlbums: { store.revision; return album ? store.childrenOf(album._id) : []; }
+    readonly property bool empty: album !== null && items.length === 0 && subAlbums.length === 0
+    // The album and the ones in it, in the order shown
+    readonly property var slideshowIds: { store.revision; return album ? [album._id].concat(Library.descendantIds(store.lib, album._id)) : []; }
+    readonly property bool hasPictures: {
+        store.revision;
+        for (var i = 0; i < slideshowIds.length; i++) {
+            var a = store.album(slideshowIds[i]);
+            if (a && a.images > 0)
+                return true;
+        }
+        return false;
+    }
 
     property bool selecting: false
     property var selection: Library.newSelection()
@@ -95,11 +111,12 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.leftMargin: Units.gu(0.5)
                 anchors.verticalCenter: parent.verticalCenter
-                visible: !appWindow.wide
+                // On a wide screen the panel is the way back, but not out of a sub-album
+                visible: !appWindow.wide || (!!view.album && !!view.album.parent)
                 image: "dark-back-arrow"
                 // the legacy back arrow is 16 px
                 iconSize: Units.gu(1.6)
-                onClicked: appWindow.albumId = ""
+                onClicked: appWindow.closeAlbum()
             }
             Image {
                 id: badge
@@ -166,17 +183,70 @@ Rectangle {
         }
     }
 
+    // The albums in it, as a row above its pictures
+    ListView {
+        id: subAlbumRow
+        objectName: "subAlbumRow"
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: Units.gu(1)
+        // A cell gu(14) wide: its picture is 3:4 of that, less the padding, and two lines below
+        height: visible ? Math.ceil((Units.gu(14) - Units.gu(1.6)) * 0.75 + Units.gu(7.2)) : 0
+        visible: view.subAlbums.length > 0 && view.items.length > 0 && !view.selecting
+        orientation: ListView.Horizontal
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        model: visible ? view.subAlbums : []
+        delegate: AlbumCell {
+            width: Units.gu(14)
+            height: subAlbumRow.height
+            album: modelData
+        }
+    }
+    Rectangle {
+        anchors.top: subAlbumRow.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 1
+        color: "#333333"
+        visible: subAlbumRow.visible
+    }
+
+    // ... or the whole page, when it has no pictures of its own
+    GridView {
+        id: subAlbumGrid
+        objectName: "subAlbumGrid"
+        anchors.top: header.bottom
+        anchors.bottom: toolbar.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: Units.gu(1)
+        visible: view.subAlbums.length > 0 && view.items.length === 0
+        clip: true
+        model: visible ? view.subAlbums : []
+        readonly property int columns: Math.max(2, Math.floor(width / Units.gu(19)))
+        cellWidth: Math.floor(width / columns)
+        cellHeight: cellWidth * 0.75 + Units.gu(5)
+        boundsBehavior: Flickable.StopAtBounds
+        delegate: AlbumCell {
+            width: subAlbumGrid.cellWidth
+            height: subAlbumGrid.cellHeight
+            album: modelData
+        }
+    }
+
     ItemGrid {
         id: grid
         objectName: "itemGrid"
-        anchors.top: header.bottom
+        anchors.top: subAlbumRow.visible ? subAlbumRow.bottom : header.bottom
         anchors.bottom: toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
         items: view.items
         selecting: view.selecting
         selection: view.selection
-        visible: !view.empty
+        visible: view.items.length > 0
         onTapped: function(item, index) {
             if (view.selecting)
                 view.selection = Library.toggle(view.selection, item._id);
@@ -248,7 +318,7 @@ Rectangle {
                 anchors.leftMargin: Units.gu(1)
                 anchors.verticalCenter: parent.verticalCenter
                 image: "icn-edit"
-                visible: !view.empty
+                visible: view.items.length > 0
                 onClicked: {
                     view.selection = Library.newSelection();
                     view.selecting = true;
@@ -282,8 +352,8 @@ Rectangle {
                 anchors.rightMargin: Units.gu(1)
                 anchors.verticalCenter: parent.verticalCenter
                 image: "icn-playslideshow"
-                visible: !!view.album && view.album.images > 0
-                onClicked: appWindow.startSlideshow([view.album._id])
+                visible: view.hasPictures
+                onClicked: appWindow.startSlideshow(view.slideshowIds)
             }
         }
 

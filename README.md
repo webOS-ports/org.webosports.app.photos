@@ -72,6 +72,11 @@ The pictures are LuneOS's default wallpapers, made into a demo library;
 **Albums**
 
 - A grid of pictures and videos, newest first; a video with its length.
+- **Sub-albums**: a cloud account's folders in folders (PiGallery2's) are
+  shown inside their album, as a row above its pictures, or as the page
+  when it has only sub-albums; back goes up one album at a time. The
+  library and the panel show the top ones; an album's slideshow plays
+  its sub-albums' pictures too.
 - Select (one by one, all, none) to **add to another album** - a device
   album, or a cloud album, which uploads them - or to **delete**, from a
   cloud account as well.

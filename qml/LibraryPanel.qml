@@ -38,7 +38,7 @@ Rectangle {
     objectName: "libraryPanel"
 
     readonly property var store: appWindow.store
-    readonly property var albums: { store.revision; return appWindow.wide ? store.lib.albums : appWindow.libraryAlbums(); }
+    readonly property var albums: { store.revision; return appWindow.wide ? Library.topLevel(store.lib.albums) : appWindow.libraryTopAlbums(); }
     property bool librariesOpen: true
 
     color: "#262626"
@@ -152,7 +152,8 @@ Rectangle {
                     coverItem: modelData.cover
                     badge: Library.isCloud(modelData) ? appWindow.libraryIcon({ accountId: modelData.accountId,
                                                                                templateId: modelData.type }) : ""
-                    selected: appWindow.albumId === modelData._id
+                    // Its own, or one of its sub-albums, open
+                    selected: { panel.store.revision; return Library.isWithin(panel.store.lib, appWindow.albumId, modelData._id); }
                     onClicked: appWindow.openAlbum(modelData._id)
                 }
             }
