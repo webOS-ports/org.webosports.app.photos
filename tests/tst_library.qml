@@ -360,6 +360,9 @@ TestCase {
         compare(Library.countLabel(lib.byId["alb-pg-rome"]), "1 image");
         compare(Library.countLabel({ images: 0, videos: 0, subAlbums: 1 }), "1 album");
         compare(Library.countLabel({ images: 0, videos: 0 }), "0 images", "as before");
+        compare(Library.countParts({ images: 3, videos: 2, subAlbums: 1 }), ["3 images", "2 videos", "1 album"]);
+        compare(Library.countParts({ images: 0, videos: 0, subAlbums: 2 }), ["2 albums"]);
+        compare(Library.countParts(null), []);
         // Its slideshow plays theirs
         compare(Library.slideshowPlaylist(lib, ["alb-pg-holidays"].concat(Library.descendantIds(lib, "alb-pg-holidays")))
                 .map(function(i) { return i._id; }), ["img-pg-italy", "img-pg-rome", "img-pg-alps"]);

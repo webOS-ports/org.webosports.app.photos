@@ -33,6 +33,9 @@ ItemDelegate {
     id: cell
 
     property var album: null
+    // A narrow cell (an album's row of sub-albums) puts each part of its
+    // count on a line of its own, where one line would be cut off.
+    property bool compact: false
 
     objectName: "albumCell-" + (album ? album._id : "")
     padding: Units.gu(0.8)
@@ -95,11 +98,13 @@ ItemDelegate {
             font.pixelSize: FontUtils.sizeToPixels("medium")
         }
         Label {
+            objectName: "albumCellCount"
             width: parent.width
-            text: Library.countLabel(cell.album)
+            text: cell.compact ? Library.countParts(cell.album).join("\n") : Library.countLabel(cell.album)
             color: "#9a9a9a"
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
+            maximumLineCount: cell.compact ? 3 : 1
             font.pixelSize: FontUtils.sizeToPixels("small")
         }
     }

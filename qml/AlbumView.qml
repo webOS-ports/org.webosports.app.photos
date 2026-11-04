@@ -191,8 +191,10 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: Units.gu(1)
-        // A cell gu(14) wide: its picture is 3:4 of that, less the padding, and two lines below
-        height: visible ? Math.ceil((Units.gu(14) - Units.gu(1.6)) * 0.75 + Units.gu(7.2)) : 0
+        // A cell gu(14) wide: its picture is 3:4 of that, less the padding, a title and as
+        // many count lines as the fullest sub-album needs (one per part: images, videos, albums)
+        readonly property int countLines: view.subAlbums.reduce(function (n, a) { return Math.max(n, Library.countParts(a).length); }, 1)
+        height: visible ? Math.ceil((Units.gu(14) - Units.gu(1.6)) * 0.75 + Units.gu(7.2) + (countLines - 1) * countMetrics.lineSpacing) : 0
         visible: view.subAlbums.length > 0 && view.items.length > 0 && !view.selecting
         orientation: ListView.Horizontal
         clip: true
@@ -202,6 +204,11 @@ Rectangle {
             width: Units.gu(14)
             height: subAlbumRow.height
             album: modelData
+            compact: true
+        }
+        FontMetrics {
+            id: countMetrics
+            font.pixelSize: FontUtils.sizeToPixels("small")
         }
     }
     Rectangle {

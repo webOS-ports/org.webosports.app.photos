@@ -449,9 +449,13 @@ function albumsLabel(n) {
     return plural(n, "1 album", "#{num} albums");
 }
 
-function countLabel(album) {
+/*
+ * What is in an album, as its parts: ["3 images", "2 videos", "1 album"].
+ * countLabel joins them on one line; a narrow cell puts each on its own.
+ */
+function countParts(album) {
     if (!album)
-        return "";
+        return [];
     var parts = [];
     var subs = album.subAlbums || 0;
     if (album.images > 0 || (album.videos === 0 && subs === 0))
@@ -460,7 +464,11 @@ function countLabel(album) {
         parts.push(videosLabel(album.videos));
     if (subs > 0)
         parts.push(albumsLabel(subs));
-    return parts.join(", ");
+    return parts;
+}
+
+function countLabel(album) {
+    return countParts(album).join(", ");
 }
 
 /*

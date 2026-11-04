@@ -861,5 +861,26 @@ TestCase {
         app.store.setEntries(Fixtures.albums().concat(Fixtures.treeAlbums().slice(0, 2)),
                              Fixtures.images().concat(Fixtures.treeImages()), Fixtures.videos());
         tryCompare(app, "albumId", "");
+
+        // A sub-album in the row with pictures and albums of its own: each on its line, and
+        // the row tall enough for both (one line was cut off: "5 images, 1 albu...")
+        var trastevere = { _id: "alb-pg-trastevere", path: "/media/internal/.photosApp/com.palm.pigallery2/jane@gallery/Trastevere",
+                           name: "Trastevere", accountId: "acc-pg2", type: "com.palm.pigallery2", aid: "Trastevere",
+                           parentId: "alb-pg-rome", showAlbum: true, modifiedTime: 1791600004, total: { images: 1 } };
+        var tImage = { _id: "img-pg-trastevere", albumId: "alb-pg-trastevere", path: Fixtures.treeImages()[0].path,
+                       mediaType: "image", type: "com.palm.pigallery2", accountId: "acc-pg2", createdTime: 1791600040,
+                       appCacheComplete: true, "com.palm.pigallery2": { pid: "img-pg-trastevere" } };
+        app.store.setEntries(Fixtures.albums().concat(Fixtures.treeAlbums(), [trastevere]),
+                             Fixtures.images().concat(Fixtures.treeImages(), [tImage]), Fixtures.videos());
+        app.openAlbum("alb-pg-italy");
+        var cellRow = find("subAlbumRow");
+        var romeCell = find("albumCell-alb-pg-rome");
+        var count = findChild(romeCell, "albumCellCount");
+        compare(count.text, "1 image\n1 album");
+        compare(count.lineCount, 2);
+        verify(!count.truncated, "nothing cut off");
+        verify(count.mapToItem(cellRow, 0, count.height).y <= cellRow.height + 0.5, "inside the row");
+        wait(200);
+        shot("subalbum-row-two-lines");
     }
 }
