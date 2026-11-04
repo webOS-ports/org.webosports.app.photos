@@ -284,6 +284,19 @@ TestCase {
         tap(find("newAlbumButton"));
         verify(app.nameDialog.opened);
         compare(app.nameDialog.title, "New Album");
+        // With the on-screen keyboard over the lower 45% of the window, the
+        // field and both buttons stay above it.
+        var root = app.contentItem;
+        var kb = Math.round(root.height * 0.45);
+        app.nameDialog.keyboardHeightForTest = kb;
+        wait(20);
+        ["promptField", "promptAcceptButton", "promptRejectButton"].forEach(function(name) {
+            var it = findChild(app.nameDialog, name);
+            var bottom = it.mapToItem(root, 0, it.height).y;
+            verify(bottom <= root.height - kb, name + " ends at " + bottom + ", the keyboard starts at " + (root.height - kb));
+        });
+        shot("new-album-keyboard");
+        app.nameDialog.keyboardHeightForTest = -1;
         app.nameDialog.text = "Trip";
         accept(app.nameDialog);
         compare(photos("createAlbum"), { name: "Trip", accountId: "local" });

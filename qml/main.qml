@@ -309,11 +309,12 @@ WebOSWindow {
         dialogWidth: Math.min(Units.gu(34), parent ? parent.width - Units.gu(2) : Units.gu(34))
     }
 
-    // An album's name, new or renamed
+    // An album's name, new or renamed. The dialog sizes itself to the part
+    // of the window above the keyboard: anchoring it to fill the window
+    // would undo that and centre it behind the keyboard.
     LC.PromptDialog {
         id: nameDialog
         objectName: "nameDialog"
-        anchors.fill: parent
         z: 60
         visible: false
         dialogHeight: Units.gu(20)
