@@ -166,7 +166,9 @@ luneos-components and `qml` are.
 - `tst_library`: the logic in `qml/js/Library.js`.
 - `tst_store`: `PhotoStore` against the stand-in bus: the library from
   db8, the photos service, permission, sync, adding, deleting, albums.
-- `tst_ui`: the app itself on the TouchPad, the mindphone and the Q25 -
+- `tst_ui`: the app itself on the TouchPad (1024x768), the mindphone
+  (480x800), the Q25 (720x720) and the radon (720x1600, a notch and
+  rounded corners) -
   the library, sources, albums, renaming, new and empty albums, adding
   photos, selecting, adding to an album (a cloud one too), deleting from
   the cloud, pictures and their actions, comments, video, the slideshow,
@@ -197,8 +199,8 @@ them in the run selector.
 
 **Tests:** open `CMakeLists.txt` as well (it builds nothing) and switch
 on CTest in Preferences > Testing. The tests then show in the Tests pane
-and Test Results as `library`, `store`, `ui-tp`, `ui-mindphone` and
-`ui-q25`. Set `LUNEOS_COMPONENTS` or `QMLTESTRUNNER`
+and Test Results as `library`, `store`, `ui-tp`, `ui-mindphone`,
+`ui-q25` and `ui-radon`. Set `LUNEOS_COMPONENTS` or `QMLTESTRUNNER`
 in the CMake configuration if they are not where `tests/run-tests.sh`
 looks.
 
