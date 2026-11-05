@@ -63,6 +63,27 @@ TestCase {
         tryVerify(function() { return done; }, 5000, "saved " + name);
     }
 
+    // An open sheet slides in: wait until it has stopped, then check that it
+    // ends inside the window and that its last choice can be reached. A shot
+    // taken as soon as it is shown catches it half way, with its rows still
+    // below the window.
+    function verifySheetSettled(sheet) {
+        var panel = findChild(sheet, "sheetPanel");
+        var list = findChild(sheet, "sheetList");
+        verify(panel !== null && list !== null, "the sheet's panel and list");
+        tryVerify(function() {
+            var bottom = panel.mapToItem(app.contentItem, 0, panel.height).y;
+            return sheet.centered ? bottom < app.height : Math.abs(bottom - app.height) < 1;
+        }, 2000, "the sheet slid into place");
+        list.positionViewAtEnd();
+        var last = findChild(list, "choice_" + (sheet.choices.length - 1));
+        verify(last !== null, "the last choice is made");
+        var top = last.mapToItem(app.contentItem, 0, 0).y;
+        verify(top >= 0 && top + last.height <= app.height + 1,
+               "the last choice is inside the window: " + top + " + " + last.height + " in " + app.height);
+        list.positionViewAtBeginning();
+    }
+
     function startApp(withService) {
         bus.calls = [];
         bus.cancelled = [];
@@ -401,6 +422,7 @@ TestCase {
         verify(labels.indexOf("Photo roll") < 0, "not the camera's");
         verify(labels.indexOf("Holiday") < 0, "not this one");
         verify(labels.indexOf("Movies") < 0, "not a folder of videos");
+        verifySheetSettled(app.sheet);
         shot("add-to-album");
         choose("Camera Uploads");
         var p = photos("addPhotos");
@@ -502,6 +524,7 @@ TestCase {
         tap(find("moreButton"));
         tryVerify(function() { return app.sheet.shown; });
         compare(app.sheet.choices.map(function(c) { return c.label; }), ["Add to Album", "Set As Wallpaper"]);
+        verifySheetSettled(app.sheet);
         shot("picture-more");
         choose("Set As Wallpaper");
         compare(lastCall("luna://com.webos.service.systemservice/wallpaper/importWallpaper").target,

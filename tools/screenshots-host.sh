@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 tools/make-demo-library.sh "$@"
 rm -rf build/screenshots
 mkdir -p build/screenshots docs/screenshots
-TESTS= UI_TESTS=screens/tst_screens.qml tests/run-tests.sh
+PROFILES=${PROFILES:-tp mindphone q25} TESTS= UI_TESTS=screens/tst_screens.qml tests/run-tests.sh
 MAGICK=$(command -v magick || command -v convert)
 for png in build/screenshots/*.png; do
     "$MAGICK" "$png" -strip -quality 88 -sampling-factor 4:4:4 "docs/screenshots/$(basename "$png" .png).jpg"
