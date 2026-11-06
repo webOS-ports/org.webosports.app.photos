@@ -351,10 +351,27 @@ Item {
     // A cloud album being shown: the photos service lists its photos and brings their
     // previews down (it brings no album's photos before it has been opened). A service
     // from before syncAlbum has every photo here already: its "Unknown method" is no failure.
+    // The albums being listed now: { albumId: true }
+    property var loadingAlbums: ({})
+
+    function _setLoading(albumId, on) {
+        var next = {};
+        for (var k in loadingAlbums)
+            next[k] = true;
+        if (on)
+            next[albumId] = true;
+        else
+            delete next[albumId];
+        loadingAlbums = next;
+    }
+
     function syncAlbum(album) {
         if (!album || !album._id || album.virtual || !Library.isCloud(album))
             return;
-        _service("syncAlbum", { albumId: album._id }, function(r) {
+        var id = album._id;
+        _setLoading(id, true);
+        _service("syncAlbum", { albumId: id }, function(r) {
+            store._setLoading(id, false);
             if (r && !r.returnValue && !/unknown method/i.test(String(r.errorText || r.msg || "")))
                 store.failed("Could not load the album", Library.serviceError(r));
         });

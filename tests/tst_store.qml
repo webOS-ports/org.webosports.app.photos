@@ -163,6 +163,17 @@ TestCase {
         store.syncAlbum({ _id: "v", virtual: true, accountId: "acc-dropbox", type: "com.palm.dropbox" });
         store.syncAlbum(null);
         compare(bus.callsTo("luna://com.palm.service.photos/syncAlbum").length, 0, "device and virtual albums: none");
+
+        // Loading from the call until its answer, whatever it is
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": null };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], true);
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": { returnValue: false, errorText: "offline" } };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], undefined, "answered: no longer");
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": { busError: "gone" } };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], undefined, "a bus error too");
     }
 
     function test_withOriginal() {
