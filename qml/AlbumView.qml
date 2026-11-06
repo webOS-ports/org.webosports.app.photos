@@ -45,7 +45,9 @@ Rectangle {
     readonly property var store: appWindow.store
     readonly property var items: { store.revision; return album ? store.itemsOf(album._id) : []; }
     readonly property var subAlbums: { store.revision; return album ? store.childrenOf(album._id) : []; }
-    readonly property bool empty: album !== null && items.length === 0 && subAlbums.length === 0
+    // A cloud album's pictures being listed: not empty, on their way
+    readonly property bool awaiting: Library.awaitingPictures(album)
+    readonly property bool empty: album !== null && items.length === 0 && subAlbums.length === 0 && !awaiting
     // The album and the ones in it, in the order shown
     readonly property var slideshowIds: { store.revision; return album ? [album._id].concat(Library.descendantIds(store.lib, album._id)) : []; }
     readonly property bool hasPictures: {
@@ -83,7 +85,18 @@ Rectangle {
         return false;
     }
 
-    onAlbumChanged: if (!album) cancelSelection()
+    // The album whose photos the photos service was last asked for
+    property string _listedId: ""
+    onAlbumChanged: {
+        if (!album) {
+            cancelSelection();
+            _listedId = "";
+        } else if (album._id !== _listedId) {
+            // Opened: a cloud album's photos come down now (and only once it has been)
+            _listedId = album._id;
+            store.syncAlbum(album);
+        }
+    }
 
     // A thumbnail that did not load, at most every two seconds.
     Timer {
@@ -261,6 +274,13 @@ Rectangle {
                 appWindow.openPicture(view.album._id, item._id, true);
         }
         onThumbnailBroken: if (!regenerate.running) regenerate.start()
+    }
+
+    BusyIndicator {
+        objectName: "albumAwaiting"
+        anchors.centerIn: grid
+        visible: view.awaiting
+        running: visible
     }
 
     // An empty album.

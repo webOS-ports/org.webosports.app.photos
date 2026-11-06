@@ -74,6 +74,8 @@ Item {
 
     // What went wrong with something asked of the service (shown by main.qml).
     signal failed(string title, string detail)
+    // A cloud picture's whole file is being fetched before it is shared, printed, ...
+    signal fetchingOriginal(var item)
 
     // function(uri, json, onReply(message), onError(text)) and the same
     // for a subscription, returning an object with cancel(): the bus,
@@ -115,7 +117,7 @@ Item {
         id: imageModel
         query: ({ select: ["_id", "albumId", "path", "appOriginal", "mediaType", "type", "accountId",
                            "createdTime", "modifiedTime", "appGridThumbnail", "appScreenNail",
-                           "appCacheComplete", "size", "comments"], limit: 500 })
+                           "appCacheComplete", "size", "comments", "original"], limit: 500 })
         allPages: true
         watch: true
         onStatusChanged: if (status === "ready") store._took("images", imageModel)
@@ -344,6 +346,35 @@ Item {
             _service("syncSingleAccount", { accountId: accountId }, null);
         else
             syncAll();
+    }
+
+    // A cloud album being shown: the photos service lists its photos and brings their
+    // previews down (it brings no album's photos before it has been opened).
+    function syncAlbum(album) {
+        if (album && album._id && !album.virtual && Library.isCloud(album))
+            _change("syncAlbum", { albumId: album._id }, "Could not load the album", null);
+    }
+
+    // done(item) with the picture's whole file at item.path. Of a cloud photo only its
+    // preview may be here (original "remote"): the photos service fetches the rest first.
+    // Nothing is done when that fails; the failure is shown.
+    function withOriginal(item, done) {
+        if (!item || item.original !== "remote") {
+            done(item);
+            return;
+        }
+        fetchingOriginal(item);
+        _service("fetchOriginal", { _id: item._id }, function(r) {
+            if (!r || !r.returnValue || !r.path) {
+                store.failed("Could not download the picture", Library.serviceError(r));
+                return;
+            }
+            var whole = Library.copyItem(item, item.mediaType);
+            whole.path = r.path;
+            whole.appOriginal = r.path;
+            whole.original = "local";
+            done(whole);
+        });
     }
 
     function createAlbum(name, specs, done) {

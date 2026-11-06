@@ -792,6 +792,69 @@ TestCase {
     // A PiGallery2 account's folders: the library shows the top one, an
     // album its sub-albums (the whole page, or a row above its pictures),
     // and back goes up one album at a time.
+    function test_20_cloudPreviews() {
+        startApp();
+        // The Dropbox photo with only its preview here
+        var images = Fixtures.images().map(function(i) {
+            if (i._id === "img-d1")
+                i.original = "remote";
+            return i;
+        });
+        app.store.setEntries(Fixtures.albums(), images, Fixtures.videos());
+        var fetched = root + "/pictures/Holiday/forest.png";
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched } };
+
+        // A cloud album not opened yet: its count from the service, a spinner while it lists
+        var albums = Fixtures.albums().concat([{ _id: "alb-unopened", path: "/media/internal/.photosApp/com.palm.dropbox/me/Trips",
+            name: "Trips", accountId: "acc-dropbox", type: "com.palm.dropbox", aid: "/Trips", showAlbum: true, listed: false,
+            modifiedTime: 1791400001, total: { images: 12 } }]);
+        app.store.setEntries(albums, images, Fixtures.videos());
+        app.openAlbum("alb-unopened");
+        compare(lastCall("luna://com.palm.service.photos/syncAlbum"), { albumId: "alb-unopened" });
+        compare(find("albumCounts").text, "12 images");
+        verify(find("albumAwaiting").running);
+        compare(findChild(app.albumView, "emptyAlbum"), null, "not shown as empty");
+        // One that cannot be listed: the user is told
+        bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorText: "offline" };
+        app.openAlbum("alb-dropbox");
+        compare(app.noticeTitle, "Could not load the album");
+        delete bus.replies["luna://com.palm.service.photos/syncAlbum"];
+        bus.calls = [];
+
+        // Opening a cloud album asks for its photos, once
+        app.closeAlbum();
+        app.openAlbum("alb-dropbox");
+        compare(lastCall("luna://com.palm.service.photos/syncAlbum"), { albumId: "alb-dropbox" });
+        app.store.setEntries(Fixtures.albums(), images, Fixtures.videos());
+        compare(bus.callsTo("luna://com.palm.service.photos/syncAlbum").length, 1, "not again as the library changes");
+        app.openAlbum("alb-holiday");
+        compare(bus.callsTo("luna://com.palm.service.photos/syncAlbum").length, 1, "a device album: none");
+
+        app.openPicture("alb-dropbox", "img-d1", false);
+        compare(bus.callsTo("luna://com.palm.service.photos/generateImgForBigView").length, 0, "not at once");
+        tryVerify(function() { return bus.callsTo("luna://com.palm.service.photos/generateImgForBigView").length === 1; }, 2000);
+        compare(lastCall("luna://com.palm.service.photos/generateImgForBigView"), { _id: "img-d1" });
+        verify(find("originalBusy").running, "the whole picture is on its way");
+        // Share, print and the wallpaper: the whole picture, fetched first
+        tap(find("shareButton"));
+        compare(lastCall("luna://com.palm.service.photos/fetchOriginal"), { _id: "img-d1" });
+        compare(launches[0].params.attachments[0].path, fetched);
+        tap(find("printButton"));
+        choose("Office Printer");
+        compare(lastCall("luna://com.palm.printmgr/jobs/allAtOnce").pathNames, [fetched]);
+        tap(find("moreButton"));
+        choose("Set As Wallpaper");
+        compare(lastCall("luna://com.webos.service.systemservice/wallpaper/importWallpaper").target, fetched);
+        compare(bus.callsTo("luna://com.palm.service.photos/fetchOriginal").length, 3);
+
+        // It cannot be fetched: nothing is sent, and the user is told
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: false, errorText: "offline" } };
+        var sent = launches.length;
+        tap(find("shareButton"));
+        compare(launches.length, sent);
+        compare(app.noticeTitle, "Could not download the picture");
+    }
+
     function test_19_subAlbums() {
         startApp();
         app.store.setEntries(Fixtures.albums().concat(Fixtures.treeAlbums()),
