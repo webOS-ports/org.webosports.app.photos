@@ -47,6 +47,9 @@ Rectangle {
     readonly property var subAlbums: { store.revision; return album ? store.childrenOf(album._id) : []; }
     // A cloud album's pictures being listed: not empty, on their way
     readonly property bool awaiting: Library.awaitingPictures(album)
+    // While it is listed, a cell for each picture still on its way
+    readonly property int pending: album ? Library.pendingCells(album, items.length, store.loadingAlbums[album._id] === true) : 0
+    readonly property var cells: pending > 0 ? items.concat(Library.placeholders(album._id, pending)) : items
     readonly property bool empty: album !== null && items.length === 0 && subAlbums.length === 0 && !awaiting
     // The album and the ones in it, in the order shown
     readonly property var slideshowIds: { store.revision; return album ? [album._id].concat(Library.descendantIds(store.lib, album._id)) : []; }
@@ -281,11 +284,13 @@ Rectangle {
         anchors.bottom: appWindow.compact ? parent.bottom : toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
-        items: view.items
+        items: view.cells
         selecting: view.selecting
         selection: view.selection
-        visible: view.items.length > 0
+        visible: view.cells.length > 0
         onTapped: function(item, index) {
+            if (item.pending)
+                return;
             if (view.selecting)
                 view.selection = Library.toggle(view.selection, item._id);
             else
@@ -297,7 +302,7 @@ Rectangle {
     BusyIndicator {
         objectName: "albumAwaiting"
         anchors.centerIn: grid
-        visible: view.awaiting
+        visible: view.awaiting && view.pending === 0
         running: visible
     }
 

@@ -837,6 +837,30 @@ TestCase {
         compare(find("albumCounts").text, "12 images");
         verify(find("albumAwaiting").running);
         compare(findChild(app.albumView, "emptyAlbum"), null, "not shown as empty");
+        // While it is being listed: a cell for each picture it has, filled as they come
+        app.closeAlbum();
+        albums[albums.length - 1].coverPath = root + "/pictures/Holiday/forest.png";
+        app.store.setEntries(albums, images, Fixtures.videos());
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched },
+                        "luna://com.palm.service.photos/syncAlbum": null };
+        app.openAlbum("alb-unopened");
+        tryCompare(find("itemGrid"), "count", 12);
+        verify(find("item-pending:alb-unopened:0"));
+        compare(findChild(app.albumView, "albumAwaiting"), null, "cells, not the spinner");
+        bus.calls = [];
+        tap(find("item-pending:alb-unopened:0"));
+        verify(!app.picture.isOpen, "a cell with no picture yet opens nothing");
+        var arrived = [{ _id: "img-u1", albumId: "alb-unopened", path: root + "/pictures/Holiday/beach.jpg", mediaType: "image",
+                         type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400002 }];
+        app.store.setEntries(albums, images.concat(arrived), Fixtures.videos());
+        tryCompare(find("itemGrid"), "count", 12);
+        verify(find("item-img-u1"));
+        compare(find("albumCounts").text, "1 image");
+        app.store._setLoading("alb-unopened", false);
+        tryCompare(find("itemGrid"), "count", 1, 1000, "listed: only what came");
+        app.closeAlbum();
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched } };
+        app.store.setEntries(albums, images, Fixtures.videos());
         // One that cannot be listed: the user is told
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorText: "offline" };
         app.openAlbum("alb-dropbox");

@@ -171,7 +171,8 @@ function compareAlbums(a, b) {
  *   { albums: [album...], byId: { id: album }, items: { albumId: [item...] },
  *     byItemId: { id: item }, children: { albumId: [album...] } }
  * Each album gets images, videos (counts), cover (its newest item, else
- * its first sub-album's), title, parent (its album's _id, or "") and
+ * the cover the photos service brought down for a cloud album not opened
+ * yet, else its first sub-album's), title, parent (its album's _id, or "") and
  * subAlbums (how many are in it); albums with showAlbum false are left
  * out, as webOS did. A sub-album's album has to be there, shown, of the
  * same account; one that is not, or a chain of them that comes back on
@@ -252,12 +253,19 @@ function build(albumEntries, imageEntries, videoEntries, root) {
 
     albums.forEach(function(a) {
         items[a._id].sort(compareItems);
-        a.cover = items[a._id].length > 0 ? items[a._id][0] : null;
+        a.cover = items[a._id].length > 0 ? items[a._id][0] : coverOf(a);
         a.title = albumTitle(a);
     });
     albums.sort(compareAlbums);
     var children = linkAlbums(albums, byId);
     return { albums: albums, byId: byId, items: items, byItemId: byItemId, children: children };
+}
+
+// A cloud album's cover file (coverPath) as an item a Thumbnail shows, or null
+function coverOf(album) {
+    if (!isCloud(album) || typeof album.coverPath !== "string" || album.coverPath === "")
+        return null;
+    return { _id: "cover:" + album._id, albumId: album._id, path: album.coverPath, mediaType: "image", cover: true };
 }
 
 // The parent each album can have (see build), its sub-albums, and the
@@ -485,6 +493,27 @@ function shownImages(album) {
  */
 function awaitingPictures(album) {
     return isCloud(album) && !album.virtual && album.images === 0 && album.videos === 0 && shownImages(album) > 0;
+}
+
+/*
+ * The cells to hold for an album's pictures still on their way while it is
+ * listed (loading): what it was told it has (total) less those here, at
+ * most maxPendingCells. None for any other album, or when it is not loading.
+ */
+var maxPendingCells = 2000;
+
+function pendingCells(album, here, loading) {
+    if (!loading || !isCloud(album) || album.virtual || !album.total || !(album.total.images > 0))
+        return 0;
+    return Math.min(maxPendingCells, Math.max(0, album.total.images - (here || 0)));
+}
+
+// count cells for pictures on their way: placeholders the grid shows
+function placeholders(albumId, count) {
+    var out = [];
+    for (var i = 0; i < count; i++)
+        out.push({ _id: "pending:" + albumId + ":" + i, albumId: albumId, mediaType: "image", pending: true });
+    return out;
 }
 
 function countLabel(album) {
