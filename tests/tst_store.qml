@@ -176,6 +176,37 @@ TestCase {
         compare(store.loadingAlbums["alb-dropbox"], undefined, "a bus error too");
     }
 
+    function test_storage() {
+        var got = "none";
+        bus.replies = { "luna://com.palm.service.photos/getStorage": { returnValue: true, capBytes: 7 } };
+        store.getStorage(function(r) { got = r; });
+        compare(got.capBytes, 7);
+        bus.replies = { "luna://com.palm.service.photos/getStorage": { returnValue: false, errorText: "x" } };
+        store.getStorage(function(r) { got = r; });
+        compare(got, null, "cannot be read: null, and no failure shown");
+        compare(failures.count, 0);
+        store.setStorage(100, function(r) { got = r; });
+        compare(last("setStorage"), { capBytes: 100 });
+        store.clearDownloads(function(r) { got = r; });
+        compare(last("clearDownloads"), {});
+        bus.replies = { "luna://com.palm.service.photos/clearDownloads": { returnValue: false, errorText: "busy" } };
+        store.clearDownloads(function(r) { got = r; });
+        compare(got, null);
+        compare(failures.count, 1, "a change that fails is shown");
+
+        var kept = [];
+        store.keeping.connect(function(a) { kept.push(a._id); });
+        store.keepAlbum(store.album("alb-dropbox"), true);
+        compare(last("keepAlbum"), { albumId: "alb-dropbox", keep: true });
+        compare(kept, ["alb-dropbox"]);
+        store.keepAlbum(store.album("alb-dropbox"), false);
+        compare(last("keepAlbum"), { albumId: "alb-dropbox", keep: false });
+        compare(kept, ["alb-dropbox"], "no longer kept: nothing to download");
+        bus.calls = [];
+        store.keepAlbum(store.album("alb-holiday"), true);
+        compare(bus.callsTo("luna://com.palm.service.photos/keepAlbum").length, 0, "a device album: no");
+    }
+
     function test_withOriginal() {
         var got = null;
         // Here whole: as it is, with no call

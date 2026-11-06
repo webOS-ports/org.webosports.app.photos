@@ -427,6 +427,25 @@ TestCase {
         compare(Library.thumbnailPath(cells[0], 256), "", "a placeholder: no file");
     }
 
+    function test_formatBytes() {
+        var MB = 1024 * 1024;
+        compare(Library.formatBytes(0), "0 MB");
+        compare(Library.formatBytes(undefined), "0 MB");
+        compare(Library.formatBytes(3.47 * MB), "3.5 MB");
+        compare(Library.formatBytes(41.3 * MB), "41 MB", "from 10 MB: whole");
+        compare(Library.formatBytes(200 * MB), "200 MB");
+        compare(Library.formatBytes(1024 * MB), "1 GB");
+        compare(Library.formatBytes(1.5 * 1024 * MB), "1.5 GB");
+        compare(Library.formatBytes(12.5 * 1024 * MB), "13 GB");
+        verify(Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", total: { images: 13 } }));
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", total: { images: 0, videos: 2 } }), "only sub-albums, or videos");
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2" }), "nothing known yet");
+        verify(Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", keep: true, total: { images: 0 } }), "kept: may be let go");
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", virtual: true, total: { images: 13 } }));
+        verify(!Library.canKeep({ accountId: "local", type: "local" }));
+        verify(!Library.canKeep(null));
+    }
+
     function test_subAlbumsThatCannotBe() {
         var odd = function(id, parentId, extra) {
             var a = { _id: id, path: "/media/internal/.photosApp/x/" + id, name: id, accountId: "acc-pg2",

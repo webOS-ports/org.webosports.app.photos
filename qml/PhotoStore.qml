@@ -377,6 +377,44 @@ Item {
         });
     }
 
+    // The storage the cloud photos take (the photos service's getStorage), to done(info), or
+    // done(null) when it cannot be read
+    function getStorage(done) {
+        _service("getStorage", {}, function(r) {
+            done(r && r.returnValue ? r : null);
+        });
+    }
+
+    function setStorage(capBytes, done) {
+        _change("setStorage", { capBytes: capBytes }, "Could not change the size", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
+    // Every opened album not kept back to its cloud
+    function clearDownloads(done) {
+        _change("clearDownloads", {}, "Could not clear the downloaded photos", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
+    // An album kept on the device: all of it brought down, and never dropped. done(r) once
+    // it is down (or no longer kept)
+    signal keeping(var album)
+    function keepAlbum(album, keep, done) {
+        if (!Library.canKeep(album))
+            return;
+        if (keep)
+            keeping(album);
+        _change("keepAlbum", { albumId: album._id, keep: keep === true },
+                keep ? "Could not keep the album on the device" : "Could not change the album", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
     // done(item) with the picture's whole file at item.path. Of a cloud photo only its
     // preview may be here (original "remote"): the photos service fetches the rest first.
     // Nothing is done when that fails; the failure is shown.

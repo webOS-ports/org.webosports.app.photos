@@ -60,6 +60,11 @@ down and sends additions and deletions back up.
 | ![Library](docs/screenshots/sargo-covers-library.jpg) | ![Year](docs/screenshots/sargo-covers-year.jpg) | ![Loading](docs/screenshots/sargo-covers-loading.jpg) | ![Month](docs/screenshots/sargo-covers-month.jpg) |
 | Years with the gallery's covers | Months not opened yet, each with its cover | One opened: a cell for each of its 13 pictures | Their previews in place |
 
+| Pixel 3a, how much the cloud photos take | | | | |
+|:---:|:---:|:---:|:---:|:---:|
+| ![Preferences](docs/screenshots/sargo-storage-preferences.jpg) | ![Size](docs/screenshots/sargo-storage-size.jpg) | ![Keep](docs/screenshots/sargo-storage-keep.jpg) | ![Downloading](docs/screenshots/sargo-storage-downloading.jpg) | ![Clearing](docs/screenshots/sargo-storage-clearing.jpg) |
+| Preferences & Accounts: the whole pictures against the cap, kept albums, the rest | The cap: 100 MB to 2 GB | An album kept on the device, from the app menu | Its dashboard while it comes down, beside the USB one | Clearing the downloaded photos |
+
 The Pixel 3a pictures are PiGallery2 3.5.2 test galleries', taken on the
 device; the rest of the walk down the tree (`sargo-subalbums-*.jpg`) and
 the library of the 5.39 GB one (`sargo-ondemand-library.jpg`) are in
