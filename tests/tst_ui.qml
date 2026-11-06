@@ -818,6 +818,14 @@ TestCase {
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorText: "offline" };
         app.openAlbum("alb-dropbox");
         compare(app.noticeTitle, "Could not load the album");
+        // An older service, which has no syncAlbum, has every photo here already: no failure
+        app.noticeTitle = "";
+        app.closeAlbum();
+        bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorCode: -1,
+                                                                   errorText: "Unknown method syncAlbum" };
+        app.openAlbum("alb-dropbox");
+        compare(app.noticeTitle, "");
+        app.closeAlbum();
         delete bus.replies["luna://com.palm.service.photos/syncAlbum"];
         bus.calls = [];
 
