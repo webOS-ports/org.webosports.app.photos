@@ -60,6 +60,8 @@ WebOSWindow {
     // The panel beside the album from this width on (webOS's sliding
     // pane: 540 px on the TouchPad).
     readonly property bool wide: width >= Units.gu(68)
+    // A phone on its side: too short for a bar at the bottom as well as the top.
+    readonly property bool compact: width > height && height < Units.gu(50)
     readonly property real headerHeight: (height < Units.gu(70) || width < Units.gu(50)) ? Units.gu(7)
                                                                                      : Units.gu(8)
     readonly property bool active: Qt.application.state === Qt.ApplicationActive

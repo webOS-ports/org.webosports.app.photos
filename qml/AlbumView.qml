@@ -136,7 +136,7 @@ Rectangle {
                 anchors.left: badge.right
                 anchors.leftMargin: Units.gu(1)
                 anchors.right: parent.right
-                anchors.rightMargin: Units.gu(2)
+                anchors.rightMargin: appWindow.compact ? toolbar.width : Units.gu(2)
                 anchors.verticalCenter: parent.verticalCenter
                 text: view.album ? view.album.title : "Album"
                 color: "white"
@@ -157,21 +157,39 @@ Rectangle {
             visible: view.selecting
 
             Button {
+                id: cancelSelectButton
                 objectName: "cancelSelectButton"
                 anchors.left: parent.left
                 anchors.leftMargin: Units.gu(1)
                 anchors.verticalCenter: parent.verticalCenter
+                visible: !appWindow.compact
                 text: "Cancel"
+                onClicked: view.cancelSelection()
+            }
+            // Short of room in the header (Add to Album and Delete are in it too): the back arrow
+            IconButton {
+                id: cancelSelectKey
+                objectName: "cancelSelectButton"
+                anchors.left: parent.left
+                anchors.leftMargin: Units.gu(0.5)
+                anchors.verticalCenter: parent.verticalCenter
+                visible: appWindow.compact
+                image: "dark-back-arrow"
+                iconSize: Units.gu(1.6)
                 onClicked: view.cancelSelection()
             }
             Label {
                 objectName: "selectedLabel"
-                anchors.centerIn: parent
+                anchors.horizontalCenter: appWindow.compact ? undefined : parent.horizontalCenter
+                anchors.left: appWindow.compact ? cancelSelectKey.right : undefined
+                anchors.leftMargin: Units.gu(1.5)
+                anchors.verticalCenter: parent.verticalCenter
                 text: view.selectedCount + " Selected"
                 color: "white"
                 font.pixelSize: FontUtils.sizeToPixels("medium")
             }
             Button {
+                id: selectAllButton
                 objectName: "selectAllButton"
                 anchors.right: parent.right
                 anchors.rightMargin: Units.gu(1)
@@ -225,7 +243,7 @@ Rectangle {
         id: subAlbumGrid
         objectName: "subAlbumGrid"
         anchors.top: header.bottom
-        anchors.bottom: toolbar.top
+        anchors.bottom: appWindow.compact ? parent.bottom : toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: Units.gu(1)
@@ -247,7 +265,7 @@ Rectangle {
         id: grid
         objectName: "itemGrid"
         anchors.top: subAlbumRow.visible ? subAlbumRow.bottom : header.bottom
-        anchors.bottom: toolbar.top
+        anchors.bottom: appWindow.compact ? parent.bottom : toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
         items: view.items
@@ -305,18 +323,25 @@ Rectangle {
         }
     }
 
+    // The bottom bar; on a short landscape window (appWindow.compact) its keys
+    // sit at the right end of the header instead, and the page runs to the bottom.
     Rectangle {
         id: toolbar
-        anchors.left: parent.left
+        anchors.left: appWindow.compact ? undefined : parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Units.gu(7)
-        color: "#2a2a2a"
+        anchors.top: appWindow.compact ? parent.top : undefined
+        anchors.bottom: appWindow.compact ? undefined : parent.bottom
+        width: compactKeys.width + Units.gu(2)
+        height: appWindow.compact ? appWindow.headerHeight : Units.gu(7)
+        color: appWindow.compact ? "transparent" : "#2a2a2a"
+        z: 3
+        // In multi-select the header's right end is Select All's
+        anchors.rightMargin: appWindow.compact && view.selecting ? selectAllButton.width + Units.gu(1) : 0
 
         // Album mode: the select button, the date and counts, Slideshow.
         Item {
             anchors.fill: parent
-            visible: !view.selecting
+            visible: !view.selecting && !appWindow.compact
 
             IconButton {
                 id: selectButton
@@ -368,7 +393,7 @@ Rectangle {
         Row {
             anchors.centerIn: parent
             spacing: Units.gu(4)
-            visible: view.selecting
+            visible: view.selecting && !appWindow.compact
 
             IconButton {
                 objectName: "addToAlbumButton"
@@ -381,6 +406,70 @@ Rectangle {
                 objectName: "deleteSelectedButton"
                 image: "icn-delete"
                 visible: view.store.can(view.album, "deletePhoto")
+                onClicked: appWindow.askDelete(Library.selectedItems(view.selection, view.items), view.album,
+                                               view.selection, function() { view.cancelSelection(); })
+            }
+        }
+
+        // The same, in the header (appWindow.compact): the date and counts, then the keys.
+        Row {
+            id: compactKeys
+            anchors.right: parent.right
+            anchors.rightMargin: Units.gu(1)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Units.gu(1)
+            visible: appWindow.compact
+
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Units.gu(13)
+                visible: !view.selecting
+                Label {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignRight
+                    visible: text !== ""
+                    text: view.album ? Library.formatDate(view.album.modifiedTime) : ""
+                    color: "#c0c0c0"
+                    elide: Text.ElideRight
+                    font.pixelSize: FontUtils.sizeToPixels("small")
+                }
+                Label {
+                    objectName: "albumCounts"
+                    width: parent.width
+                    horizontalAlignment: Text.AlignRight
+                    text: Library.countLabel(view.album)
+                    color: "#c0c0c0"
+                    elide: Text.ElideRight
+                    font.pixelSize: FontUtils.sizeToPixels("small")
+                }
+            }
+            IconButton {
+                objectName: "selectButton"
+                image: "icn-edit"
+                visible: !view.selecting && view.items.length > 0
+                onClicked: {
+                    view.selection = Library.newSelection();
+                    view.selecting = true;
+                }
+            }
+            IconButton {
+                objectName: "albumSlideshowButton"
+                image: "icn-playslideshow"
+                visible: !view.selecting && view.hasPictures
+                onClicked: appWindow.startSlideshow(view.slideshowIds)
+            }
+            IconButton {
+                objectName: "addToAlbumButton"
+                image: "icn-add-album"
+                visible: view.selecting
+                enabled: view.store.serviceAvailable
+                onClicked: appWindow.chooseAlbum(Library.selectedItems(view.selection, view.items),
+                                                 view.album._id)
+            }
+            IconButton {
+                objectName: "deleteSelectedButton"
+                image: "icn-delete"
+                visible: view.selecting && view.store.can(view.album, "deletePhoto")
                 onClicked: appWindow.askDelete(Library.selectedItems(view.selection, view.items), view.album,
                                                view.selection, function() { view.cancelSelection(); })
             }

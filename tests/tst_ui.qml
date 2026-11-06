@@ -906,4 +906,51 @@ TestCase {
         wait(200);
         shot("subalbum-row-two-lines");
     }
+
+    // The bottom edge of an item, in the window
+    function bottomOf(item) {
+        return item.mapToItem(app.contentItem, 0, item.height).y;
+    }
+
+    // Two rows of albums and of pictures on every screen: a phone on its side
+    // showed one and a bit, the cells sized by the width alone. There the
+    // bottom bars go, their keys in the header instead, and the title stays whole.
+    function test_20_rows() {
+        startApp();
+        var panel = find("libraryPanel");
+        var list = find("albumList");
+        tryVerify(function() { return list.count === 6; }, 2000, "six albums shown");
+        verify(!find("panelTitle").truncated, "the panel's title is not cut off: " + find("panelTitle").width);
+        if (app.compact) {
+            fuzzyCompare(bottomOf(list), bottomOf(panel), 1, "no bar below the panel's list");
+            // New Album on the ALL ALBUMS heading, out of the panel's header
+            verify(find("newAlbumButton").mapToItem(panel, 0, 0).y >= app.headerHeight, "New Album below the header");
+        }
+        if (app.wide) {
+            var albums = find("albumGrid");
+            verify(albums.height >= 2 * albums.cellHeight,
+                   "two rows of albums: " + albums.height + " for cells of " + albums.cellHeight);
+            if (app.compact)
+                fuzzyCompare(bottomOf(albums), bottomOf(albums.parent), 1, "no bar below the albums");
+        }
+
+        openAlbum("alb-holiday");
+        var grid = find("itemGrid");
+        verify(grid.height >= 2 * grid.cellHeight,
+               "two rows of pictures: " + grid.height + " for cells of " + grid.cellHeight);
+        if (!app.compact)
+            return;
+        fuzzyCompare(bottomOf(grid), bottomOf(app.albumView), 1, "no bar below the pictures");
+        var slideshow = find("albumSlideshowButton");
+        verify(slideshow.mapToItem(app.albumView, 0, 0).y < app.headerHeight, "Slideshow in the header");
+        // The album's title and, picking, the count stop short of the keys
+        var title = find("albumTitle");
+        var keysLeft = find("selectButton").mapToItem(app.contentItem, 0, 0).x;
+        verify(title.mapToItem(app.contentItem, title.width, 0).x <= keysLeft, "the title ends before the keys");
+        tap(find("selectButton"));
+        var picked = find("selectedLabel");
+        keysLeft = find("addToAlbumButton").mapToItem(app.contentItem, 0, 0).x;
+        verify(picked.mapToItem(app.contentItem, picked.contentWidth, 0).x <= keysLeft,
+               "\"0 Selected\" ends before Add to Album");
+    }
 }

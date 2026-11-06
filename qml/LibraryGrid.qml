@@ -64,7 +64,7 @@ Rectangle {
             anchors.left: sourceIcon.right
             anchors.leftMargin: Units.gu(1.5)
             anchors.right: parent.right
-            anchors.rightMargin: Units.gu(2)
+            anchors.rightMargin: appWindow.compact ? toolbar.width : Units.gu(2)
             anchors.verticalCenter: parent.verticalCenter
             text: appWindow.sourceTitle
             color: "white"
@@ -77,13 +77,15 @@ Rectangle {
         id: grid
         objectName: "albumGrid"
         anchors.top: header.bottom
-        anchors.bottom: toolbar.top
+        anchors.bottom: appWindow.compact ? parent.bottom : toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: Units.gu(1)
         clip: true
         model: page.albums
-        readonly property int columns: Math.max(2, Math.floor(width / Units.gu(19)))
+        readonly property real maxCell: height > 0 ? (height / 2 - Units.gu(5)) / 0.75 : width
+        readonly property int columns: Math.max(2, Math.floor(width / Units.gu(19)),
+                                                Math.ceil(width / Math.max(Units.gu(8), maxCell)))
         cellWidth: Math.floor(width / columns)
         cellHeight: cellWidth * 0.75 + Units.gu(5)
         boundsBehavior: Flickable.StopAtBounds
@@ -105,15 +107,21 @@ Rectangle {
         text: appWindow.source !== "all" && appWindow.source !== "local" ? "No albums in this account yet." : "No photos or videos yet."
     }
 
+    // The bottom bar; on a short landscape window (appWindow.compact) its keys
+    // sit at the right end of the header instead, and the page runs to the bottom.
     Rectangle {
         id: toolbar
-        anchors.left: parent.left
+        anchors.left: appWindow.compact ? undefined : parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Units.gu(7)
-        color: "#2a2a2a"
+        anchors.top: appWindow.compact ? parent.top : undefined
+        anchors.bottom: appWindow.compact ? undefined : parent.bottom
+        width: librarySlideshow.width + Units.gu(2)
+        height: appWindow.compact ? appWindow.headerHeight : Units.gu(7)
+        color: appWindow.compact ? "transparent" : "#2a2a2a"
+        z: 3
 
         IconButton {
+            id: librarySlideshow
             objectName: "librarySlideshowButton"
             anchors.centerIn: parent
             image: "icn-playslideshow"
