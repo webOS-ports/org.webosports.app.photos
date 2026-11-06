@@ -11,7 +11,8 @@
 #   tst_store    PhotoStore against FakeBus
 #   tst_ui       the whole app, once per screen in PROFILES - by default the
 #                TouchPad, the mindphone, the Q25 and the radon (720x1600, with
-#                a notch and rounded corners). Each state is also saved
+#                a notch and rounded corners), and the tissot, the sargo and
+#                the radon on their side. Each state is also saved
 #                as a screenshot in build/test-output/ui/<profile>-<state>.png.
 #
 # Each test file gets its own qmltestrunner, and tst_ui one per profile:
@@ -32,7 +33,7 @@
 # A Qt 6 qmltestrunner is looked for before the one on PATH: on Debian and
 # Ubuntu that one is often qtchooser's wrapper, which runs Qt 5's.
 COMPONENTS=${COMPONENTS:-../../luneos-components}
-PROFILES=${PROFILES:-tp mindphone q25 radon}
+PROFILES=${PROFILES:-tp mindphone q25 radon tissot-land sargo-land radon-land}
 TESTS=${TESTS-tst_library.qml tst_store.qml}
 UI_TESTS=${UI_TESTS-tst_ui.qml}
 if [ -z "${QMLTESTRUNNER:-}" ]; then
@@ -79,6 +80,12 @@ for t in $TESTS; do
 done
 [ -n "$UI_TESTS" ] || exit $status
 for profile in $PROFILES; do
+    if ! grep -q "^ *\"$profile\": *{" "$COMPONENTS/test/imports/LunaNext/Common/SettingsStub.js"; then
+        # It would quietly run as the desktop profile instead
+        echo "luneos-components at $COMPONENTS has no profile $profile; update it" >&2
+        status=1
+        continue
+    fi
     common=$CONF/profile-$profile/LunaNext/Common
     mkdir -p "$common"
     cp "$COMPONENTS"/test/imports/LunaNext/Common/* "$common/"

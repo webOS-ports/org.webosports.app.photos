@@ -12,7 +12,7 @@ project(org.webosports.app.photos NONE)
 set(LUNEOS_COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/../luneos-components" CACHE PATH
     "The luneos-components checkout")
 set(QMLTESTRUNNER "" CACHE FILEPATH "Qt 6 qmltestrunner (found when empty)")
-set(PHOTOS_PROFILES tp mindphone q25 radon CACHE STRING "Device profiles tst_ui runs on")
+set(PHOTOS_PROFILES tp mindphone q25 radon tissot-land sargo-land radon-land CACHE STRING "Device profiles tst_ui runs on")
 
 enable_testing()
 
