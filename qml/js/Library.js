@@ -458,13 +458,33 @@ function countParts(album) {
         return [];
     var parts = [];
     var subs = album.subAlbums || 0;
-    if (album.images > 0 || (album.videos === 0 && subs === 0))
-        parts.push(imagesLabel(album.images));
+    var images = shownImages(album);
+    if (images > 0 || (album.videos === 0 && subs === 0))
+        parts.push(imagesLabel(images));
     if (album.videos > 0)
         parts.push(videosLabel(album.videos));
     if (subs > 0)
         parts.push(albumsLabel(subs));
     return parts;
+}
+
+/*
+ * How many pictures an album has, as far as is known: those here, or for a cloud
+ * album whose photos are yet to come down, what its service says it has.
+ */
+function shownImages(album) {
+    if (!album)
+        return 0;
+    var told = isCloud(album) && album.total && album.total.images > 0 ? album.total.images : 0;
+    return album.images > 0 ? album.images : told;
+}
+
+/*
+ * A cloud album with pictures in it of which none is here yet: its photos are
+ * being listed (they come down once it has been opened).
+ */
+function awaitingPictures(album) {
+    return isCloud(album) && !album.virtual && album.images === 0 && album.videos === 0 && shownImages(album) > 0;
 }
 
 function countLabel(album) {

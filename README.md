@@ -50,8 +50,14 @@ down and sends additions and deletions back up.
 | ![Library](docs/screenshots/sargo-subalbums-library.jpg) | ![Family](docs/screenshots/sargo-subalbums-family.jpg) | ![Holidays](docs/screenshots/sargo-subalbums-holidays.jpg) | ![2024 Norway](docs/screenshots/sargo-subalbums-norway.jpg) |
 | Libraries: the top folders of a PiGallery2 account | An album of only albums | Albums with pictures and albums in them | A row of sub-albums above the pictures |
 
-The Pixel 3a pictures are a PiGallery2 3.5.2 test gallery's, taken on the
-device; the rest of its walk down the tree (`sargo-subalbums-*.jpg`) is in
+| Pixel 3a, a 5.39 GB gallery as it is looked at | | | |
+|:---:|:---:|:---:|:---:|
+| ![Year](docs/screenshots/sargo-ondemand-year.jpg) | ![Loading](docs/screenshots/sargo-ondemand-loading.jpg) | ![Month](docs/screenshots/sargo-ondemand-month.jpg) | ![Picture](docs/screenshots/sargo-ondemand-picture.jpg) |
+| Months not opened yet, with the gallery's counts | One opened: its previews on their way | 13 previews, 6 KB each | The whole picture, fetched when opened |
+
+The Pixel 3a pictures are PiGallery2 3.5.2 test galleries', taken on the
+device; the rest of the walk down the tree (`sargo-subalbums-*.jpg`) and
+the library of the 5.39 GB one (`sargo-ondemand-library.jpg`) are in
 `docs/screenshots/` too.
 
 Each device's slideshow and exhibition are in `docs/screenshots/` too.

@@ -363,6 +363,19 @@ TestCase {
         compare(Library.countParts({ images: 3, videos: 2, subAlbums: 1 }), ["3 images", "2 videos", "1 album"]);
         compare(Library.countParts({ images: 0, videos: 0, subAlbums: 2 }), ["2 albums"]);
         compare(Library.countParts(null), []);
+        // A cloud album not opened yet: what its service says it has, and its pictures awaited
+        var unopened = { accountId: "acc-pg", type: "com.palm.pigallery2", listed: false, images: 0, videos: 0,
+                         total: { images: 151 } };
+        compare(Library.countParts(unopened), ["151 images"]);
+        verify(Library.awaitingPictures(unopened));
+        unopened.images = 2;
+        compare(Library.countParts(unopened), ["2 images"], "those here, once some are");
+        verify(!Library.awaitingPictures(unopened));
+        var device = { accountId: "", type: "local", images: 0, videos: 0, total: { images: 4 } };
+        compare(Library.countParts(device), ["0 images"], "a device album: what is here");
+        verify(!Library.awaitingPictures(device));
+        verify(!Library.awaitingPictures({ accountId: "acc-pg", type: "com.palm.pigallery2", images: 0, videos: 0,
+                                           total: { images: 0 } }), "an empty cloud album is empty");
         // Its slideshow plays theirs
         compare(Library.slideshowPlaylist(lib, ["alb-pg-holidays"].concat(Library.descendantIds(lib, "alb-pg-holidays")))
                 .map(function(i) { return i._id; }), ["img-pg-italy", "img-pg-rome", "img-pg-alps"]);

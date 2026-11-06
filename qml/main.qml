@@ -112,6 +112,7 @@ WebOSWindow {
             appWindow.notice = detail;
         }
         onRevisionChanged: appWindow.checkCurrent()
+        onFetchingOriginal: function(item) { pictureView.flash("Downloading the picture"); }
     }
 
     // The device's name, as webOS's "My TouchPad".
@@ -281,13 +282,26 @@ WebOSWindow {
 
     // Email, the only way webOS 3.0 shared a picture.
     function share(item) {
-        launchApp("com.palm.app.email", { attachments: [{ name: Library.basename(item.path), path: item.path,
-                                                         fullPath: item.path, mimeType: item.mediaType === "video" ? "video/*" : "image/*" }] });
+        photoStore.withOriginal(item, function(item) {
+            launchApp("com.palm.app.email", { attachments: [{ name: Library.basename(item.path), path: item.path,
+                                                             fullPath: item.path, mimeType: item.mediaType === "video" ? "video/*" : "image/*" }] });
+        });
+    }
+
+    // Print the whole picture, not a cloud photo's preview.
+    function printPicture(item) {
+        photoStore.withOriginal(item, function(item) {
+            printer.printItem(item, sheet);
+        });
     }
 
     // systemservice crops and scales the picture for the screen and hands
     // back the wallpaper to store as the preference.
     function setWallpaper(item) {
+        photoStore.withOriginal(item, _setWallpaper);
+    }
+
+    function _setWallpaper(item) {
         busCall("luna://com.webos.service.systemservice/wallpaper/importWallpaper",
                 JSON.stringify({ target: item.path }), function(message) {
             var r = JSON.parse(message.payload);

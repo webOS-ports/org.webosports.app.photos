@@ -56,6 +56,24 @@ Rectangle {
     // What the tests replace: the video engine.
     property url engineSource: Qt.resolvedUrl("VideoEngine.qml")
 
+    // A cloud photo of which only the preview is here, shown: the photos service fetches
+    // the whole picture and makes its screen-size copy, once per picture shown. Only one
+    // that stays a moment: not every picture a swipe passes, nor the first of the album on
+    // the way to the one opened.
+    property string _wholeAskedId: ""
+    readonly property string _previewShownId: isOpen && current && current.original === "remote" ? current._id : ""
+    on_PreviewShownIdChanged: if (_previewShownId) askWhole.restart(); else askWhole.stop()
+    Timer {
+        id: askWhole
+        interval: 500
+        onTriggered: {
+            if (view._previewShownId && view._previewShownId !== view._wholeAskedId) {
+                view._wholeAskedId = view._previewShownId;
+                view.store.requestScreenNail(view.current);
+            }
+        }
+    }
+
     signal closed()
 
     color: "black"
@@ -192,6 +210,22 @@ Rectangle {
                     onTapped: view.toggleControls()
                 }
             }
+            // A cloud photo of which only the preview is here: the photos service is
+            // fetching the whole picture (generateImgForBigView). Given up on after a while,
+            // as the preview is all there is when it cannot be fetched.
+            BusyIndicator {
+                objectName: "originalBusy"
+                anchors.centerIn: parent
+                running: visible
+                visible: page.isCurrent && modelData.original === "remote" && !giveUp.done
+                Timer {
+                    id: giveUp
+                    property bool done: false
+                    interval: 30000
+                    running: page.isCurrent && modelData.original === "remote" && !done
+                    onTriggered: done = true
+                }
+            }
             Loader {
                 anchors.fill: parent
                 active: modelData.mediaType === "video"
@@ -291,7 +325,7 @@ Rectangle {
                 width: buttons.buttonWidth
                 image: "icn-print"
                 visible: !view.isVideo && view.current !== null && !!view.current.path
-                onClicked: appWindow.printer.printItem(view.current, appWindow.sheet)
+                onClicked: appWindow.printPicture(view.current)
             }
             IconButton {
                 objectName: "deleteButton"

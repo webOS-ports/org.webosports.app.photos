@@ -155,6 +155,49 @@ TestCase {
         compare(failures.signalArguments[2][1], "Service does not exist");
     }
 
+    function test_syncAlbum() {
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(last("syncAlbum"), { albumId: "alb-dropbox" });
+        bus.calls = [];
+        store.syncAlbum(store.album("alb-holiday"));
+        store.syncAlbum({ _id: "v", virtual: true, accountId: "acc-dropbox", type: "com.palm.dropbox" });
+        store.syncAlbum(null);
+        compare(bus.callsTo("luna://com.palm.service.photos/syncAlbum").length, 0, "device and virtual albums: none");
+    }
+
+    function test_withOriginal() {
+        var got = null;
+        // Here whole: as it is, with no call
+        store.withOriginal(store.item("img-h1"), function(i) { got = i; });
+        compare(got.path, "/r/pictures/Holiday/beach.jpg");
+        compare(bus.callsTo("luna://com.palm.service.photos/fetchOriginal").length, 0);
+
+        // Only the preview here: fetched first, then the whole file's path
+        var remote = { _id: "img-p", albumId: "alb-dropbox", path: "/r/cloud/a.webp", original: "remote",
+                       mediaType: "image", type: "com.palm.dropbox", accountId: "acc-dropbox" };
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: "/r/cloud/a.jpg" } };
+        var fetching = 0;
+        var count = function() { fetching++; };
+        store.fetchingOriginal.connect(count);
+        got = null;
+        store.withOriginal(remote, function(i) { got = i; });
+        compare(last("fetchOriginal"), { _id: "img-p" });
+        compare(got.path, "/r/cloud/a.jpg");
+        compare(got.original, "local");
+        compare(got._id, "img-p");
+        compare(remote.path, "/r/cloud/a.webp", "the entry itself untouched");
+        compare(fetching, 1);
+
+        // It cannot be fetched: nothing done, the failure shown
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: false, errorText: "offline" } };
+        got = null;
+        store.withOriginal(remote, function(i) { got = i; });
+        compare(got, null);
+        compare(failures.count, 1);
+        compare(failures.signalArguments[0][0], "Could not download the picture");
+        store.fetchingOriginal.disconnect(count);
+    }
+
     function test_screenNail_comments() {
         store.requestScreenNail(store.item("img-h1"));
         compare(last("generateImgForBigView"), { _id: "img-h1" });
