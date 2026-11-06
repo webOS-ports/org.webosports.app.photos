@@ -516,6 +516,23 @@ function placeholders(albumId, count) {
     return out;
 }
 
+// Bytes as the Preferences page shows them: "0 MB", "12.3 MB", "200 MB", "1.5 GB"
+function formatBytes(n) {
+    var mb = (n || 0) / (1024 * 1024);
+    if (mb >= 1024) {
+        var gb = mb / 1024;
+        return (gb >= 10 || gb === Math.floor(gb) ? Math.round(gb) : Math.round(gb * 10) / 10) + " GB";
+    }
+    return (mb >= 10 || mb === Math.floor(mb) ? Math.round(mb) : Math.round(mb * 10) / 10) + " MB";
+}
+
+// Whether an album can be kept on the device: a cloud album of its own (not a virtual one)
+// Keep on Device keeps an album's own pictures: a folder of only sub-albums has none
+function canKeep(album) {
+    return isCloud(album) && !album.virtual
+        && (album.keep === true || !!(album.total && album.total.images > 0));
+}
+
 function countLabel(album) {
     return countParts(album).join(", ");
 }

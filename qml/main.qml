@@ -75,6 +75,7 @@ WebOSWindow {
     property alias slideshow: slideshowView
     property alias appMenu: appMenu
     property alias sheet: sheet
+    property alias preferencesView: prefsView
     property alias confirm: confirmDialog
     property alias nameDialog: nameDialog
     property alias printer: printer
@@ -113,6 +114,7 @@ WebOSWindow {
         }
         onRevisionChanged: appWindow.checkCurrent()
         onFetchingOriginal: function(item) { pictureView.flash("Downloading the picture"); }
+        onKeeping: function(album) { appWindow.keepStarted(album); }
     }
 
     // The device's name, as webOS's "My TouchPad".
@@ -255,6 +257,75 @@ WebOSWindow {
                          onAccepted: function(name) { photoStore.renameAlbum(album._id, name.trim()); } });
     }
 
+    // Keep on Device: the album's pictures all brought down, and never dropped
+    function toggleKeep(album) {
+        if (!Library.canKeep(album))
+            return;
+        var keep = album.keep !== true;
+        photoStore.keepAlbum(album, keep, function(r) {
+            if (keep)
+                appWindow.keepEnded(album, r);
+        });
+    }
+
+    readonly property string appId: "org.webosports.app.photos"
+    // The glyph webOS's sync banners and dashboards show (enyo syncui's
+    // notification-small-sync.png, also in systemui)
+    readonly property string syncGlyph: "/usr/palm/applications/com.palm.systemui/images/notification-small-sync.png"
+
+    // --- Keep on Device, as webOS's sync tells of a sync --------------------------
+    // A banner when it starts, a dashboard while it runs, a banner when it is done.
+
+    // The albums coming down, the latest last: [{ _id, title, icon }]
+    property var keepingAlbums: []
+    // Swiped away: it stays away until the albums coming down now are done
+    property bool keepDashboardDismissed: false
+
+    function keepStarted(album) {
+        if (keepingAlbums.some(function(a) { return a._id === album._id; }))
+            return;
+        // The account's icon, as the sync dashboard has it
+        var lib = { accountId: album.accountId, templateId: (photoStore.accounts[album.accountId] || {}).templateId };
+        keepingAlbums = keepingAlbums.concat([{ _id: album._id, title: album.title, icon: libraryIcon(lib).toString() }]);
+        banner(album.title + ": Downloading album...");
+    }
+
+    // r null: it failed, and the store has said so
+    function keepEnded(album, r) {
+        keepingAlbums = keepingAlbums.filter(function(a) { return a._id !== album._id; });
+        if (keepingAlbums.length === 0)
+            keepDashboardDismissed = false;
+        if (!r)
+            return;
+        // The ones that did not come down come when they are opened
+        banner(album.title + ": " + (r.failed > 0 ? (r.photos - r.failed) + " of " + r.photos + " pictures downloaded"
+                                                  : "Download completed"));
+    }
+
+    // A banner, as PalmSystem.addBannerMessage posts one: a "light" toast, which goes by
+    // and leaves nothing in the notification list
+    function banner(message) {
+        busCall("luna://com.webos.notification/createToast",
+                JSON.stringify({ type: "light", sourceId: appId, message: message, iconUrl: syncGlyph }),
+                null, function(error) { console.warn("Photos: no banner: " + error); });
+    }
+
+    Loader {
+        id: keepDashboardLoader
+        objectName: "keepDashboardLoader"
+        active: appWindow.keepingAlbums.length > 0 && !appWindow.keepDashboardDismissed
+        sourceComponent: KeepDashboard {
+            readonly property var latest: appWindow.keepingAlbums[appWindow.keepingAlbums.length - 1] || {}
+            title: latest.title || ""
+            icon: latest.icon || ""
+            count: appWindow.keepingAlbums.length
+            smallIcon: appWindow.syncGlyph
+            onTapped: appWindow.launchApp(appWindow.appId, { albumID: latest._id })
+            // Later: this runs in the window's own signal
+            onDismissed: Qt.callLater(function() { appWindow.keepDashboardDismissed = true; })
+        }
+    }
+
     function askDeleteAlbum(album) {
         confirmDialog.ask({ title: "Delete Album", message: "Are you sure you want to delete this album?",
                             acceptText: "Delete Album", destructive: true,
@@ -379,8 +450,17 @@ WebOSWindow {
             onTriggered: photoStore.syncAll()
         }
         MenuItem {
+            objectName: "keepMenuItem"
+            text: "Keep on Device"
+            checkable: true
+            checked: !!appWindow.currentAlbum && appWindow.currentAlbum.keep === true
+            // The app menu is static: greyed out where it does not apply
+            enabled: photoStore.serviceAvailable && appWindow.albumId !== "" && Library.canKeep(appWindow.currentAlbum)
+            onTriggered: appWindow.toggleKeep(appWindow.currentAlbum)
+        }
+        MenuItem {
             text: "Preferences & Accounts"
-            onTriggered: appWindow.launchApp("com.palm.app.accounts", {})
+            onTriggered: prefsView.open()
         }
     }
 
@@ -485,7 +565,7 @@ WebOSWindow {
         Item {
             id: browser
             anchors.fill: parent
-            visible: !pictureView.isOpen && !slideshowView.isOpen
+            visible: !pictureView.isOpen && !slideshowView.isOpen && !prefsView.isOpen
 
             LibraryPanel {
                 id: libraryPanel
@@ -530,6 +610,11 @@ WebOSWindow {
                 z: 10
                 onDismissed: { appWindow.notice = ""; appWindow.noticeTitle = ""; }
             }
+        }
+
+        PreferencesView {
+            id: prefsView
+            anchors.fill: parent
         }
 
         PictureView {
@@ -579,6 +664,8 @@ WebOSWindow {
             slideshowView.stop();
             return true;
         }
+        if (prefsView.handleBack())
+            return true;
         if (pictureView.handleBack())
             return true;
         if (albumView.handleBack())
