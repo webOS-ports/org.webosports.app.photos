@@ -39,7 +39,8 @@ GridView {
     signal tapped(var item, int index)
     signal thumbnailBroken()
 
-    readonly property int columns: Math.max(3, Math.floor(width / Units.gu(16)))
+    readonly property int columns: Math.max(3, Math.floor(width / Units.gu(16)),
+                                            Math.ceil(width / Math.max(Units.gu(6), height > 0 ? height / 2 : width)))
     cellWidth: Math.floor(width / columns)
     cellHeight: cellWidth
     clip: true

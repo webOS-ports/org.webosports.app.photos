@@ -62,10 +62,12 @@ Rectangle {
             source: Qt.resolvedUrl("../icon.png")
         }
         Label {
+            objectName: "panelTitle"
             anchors.left: appIcon.right
             anchors.leftMargin: Units.gu(1)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: appWindow.compact && !appWindow.wide ? toolbar.width : 0
             text: "Libraries & Albums"
             color: "white"
             elide: Text.ElideRight
@@ -77,7 +79,7 @@ Rectangle {
         id: list
         objectName: "albumList"
         anchors.top: header.bottom
-        anchors.bottom: toolbar.top
+        anchors.bottom: appWindow.compact ? parent.bottom : toolbar.top
         anchors.left: parent.left
         anchors.right: parent.right
         clip: true
@@ -128,6 +130,20 @@ Rectangle {
             }
             LC.SectionDivider {
                 text: appWindow.wide || appWindow.source === "all" ? "ALL ALBUMS" : appWindow.sourceTitle.toUpperCase()
+
+                // Short of room in the header (appWindow.compact): New Album on this heading instead
+                IconButton {
+                    objectName: "newAlbumButton"
+                    anchors.right: parent.right
+                    anchors.rightMargin: Units.gu(0.5)
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitHeight: parent.height
+                    iconSize: Units.gu(2.6)
+                    visible: appWindow.compact
+                    image: "icn-add-album"
+                    enabled: panel.store.serviceAvailable
+                    onClicked: appWindow.askNewAlbum([])
+                }
             }
             Label {
                 objectName: "panelStatus"
@@ -160,18 +176,24 @@ Rectangle {
         }
     }
 
+    // The bottom bar; on a short landscape window (appWindow.compact) its keys
+    // sit at the right end of the header instead, and the page runs to the bottom.
     Rectangle {
         id: toolbar
-        anchors.left: parent.left
+        anchors.left: appWindow.compact ? undefined : parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Units.gu(7)
-        color: "#1d1d1d"
+        anchors.top: appWindow.compact ? parent.top : undefined
+        anchors.bottom: appWindow.compact ? undefined : parent.bottom
+        width: compactKeys.width + Units.gu(2)
+        height: appWindow.compact ? appWindow.headerHeight : Units.gu(7)
+        color: appWindow.compact ? "transparent" : "#1d1d1d"
+        z: 3
 
         Button {
             objectName: "newAlbumButton"
             anchors.centerIn: parent
             text: "New Album"
+            visible: !appWindow.compact
             enabled: panel.store.serviceAvailable
             onClicked: appWindow.askNewAlbum([])
         }
@@ -180,9 +202,24 @@ Rectangle {
             anchors.right: parent.right
             anchors.rightMargin: Units.gu(1)
             anchors.verticalCenter: parent.verticalCenter
-            visible: !appWindow.wide
+            visible: !appWindow.wide && !appWindow.compact
             image: "icn-playslideshow"
             onClicked: appWindow.startSlideshow(Library.slideshowAlbums(appWindow.libraryAlbums(), []))
+        }
+        Row {
+            id: compactKeys
+            anchors.right: parent.right
+            anchors.rightMargin: Units.gu(1)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Units.gu(1)
+            visible: appWindow.compact
+
+            IconButton {
+                objectName: "panelSlideshowButton"
+                visible: !appWindow.wide
+                image: "icn-playslideshow"
+                onClicked: appWindow.startSlideshow(Library.slideshowAlbums(appWindow.libraryAlbums(), []))
+            }
         }
     }
 

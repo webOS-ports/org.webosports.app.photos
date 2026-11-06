@@ -168,11 +168,14 @@ luneos-components and `qml` are.
   db8, the photos service, permission, sync, adding, deleting, albums.
 - `tst_ui`: the app itself on the TouchPad (1024x768), the mindphone
   (480x800), the Q25 (720x720) and the radon (720x1600, a notch and
-  rounded corners) -
+  rounded corners), and the tissot, the sargo and the radon on their
+  side (`tissot-land` 1920x1080, `sargo-land` 2220x1080, `radon-land`
+  1600x720) -
   the library, sources, albums, renaming, new and empty albums, adding
   photos, selecting, adding to an album (a cloud one too), deleting from
   the cloud, pictures and their actions, comments, video, the slideshow,
-  exhibition, launch parameters, the app menu. Each state is saved to
+  exhibition, launch parameters, the app menu, and two rows of albums
+  and of pictures on every screen. Each state is saved to
   `build/test-output/ui/<device>-<state>.png` to look at.
 
 `PROFILES`, `TESTS` and `UI_TESTS` pick what runs, for example
@@ -200,7 +203,8 @@ them in the run selector.
 **Tests:** open `CMakeLists.txt` as well (it builds nothing) and switch
 on CTest in Preferences > Testing. The tests then show in the Tests pane
 and Test Results as `library`, `store`, `ui-tp`, `ui-mindphone`,
-`ui-q25` and `ui-radon`. Set `LUNEOS_COMPONENTS` or `QMLTESTRUNNER`
+`ui-q25`, `ui-radon`, `ui-tissot-land`, `ui-sargo-land` and
+`ui-radon-land`. Set `LUNEOS_COMPONENTS` or `QMLTESTRUNNER`
 in the CMake configuration if they are not where `tests/run-tests.sh`
 looks.
 
