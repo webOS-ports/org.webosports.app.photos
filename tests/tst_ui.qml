@@ -661,14 +661,14 @@ TestCase {
         compare(show.currentItem._id, "img-h1", "round at the ends");
         // A photo whose file changes under the slideshow (its whole picture came down, or
         // went back to the cloud): shown from where it is now
-        var moved = Fixtures.images().map(function(i) { if (i._id === "img-h1") i.path = i.path.replace("Holiday/", "Holiday/whole-"); return i; });
+        var moved = Fixtures.images().map(function(i) { if (i._id === "img-h1") i.path = i.path.replace("beach.jpg", "forest.png"); return i; });
         app.store.setEntries(Fixtures.albums(), moved, Fixtures.videos());
-        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") > 0, find("slideFront").source);
+        verify(/forest\.png$/.test(find("slideFront").source.toString()), find("slideFront").source);
         show.go(1);
         show.go(-1);
-        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") > 0, "and when it comes round again");
+        verify(/forest\.png$/.test(find("slideFront").source.toString()), "and when it comes round again");
         app.store.setEntries(Fixtures.albums(), Fixtures.images(), Fixtures.videos());
-        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") < 0);
+        verify(/beach\.jpg$/.test(find("slideFront").source.toString()), find("slideFront").source);
         wait(700);
         shot("slideshow");
         // A swipe goes on, a tap ends it.
@@ -848,7 +848,7 @@ TestCase {
         app.openAlbum("alb-unopened");
         compare(lastCall("luna://com.palm.service.photos/syncAlbum"), { albumId: "alb-unopened" });
         compare(find("albumCounts").text, "12 images");
-        verify(find("albumAwaiting").running);
+        tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner while it lists");
         compare(findChild(app.albumView, "emptyAlbum"), null, "not shown as empty");
         // While it is being listed: a cell for each picture it has, filled as they come
         app.closeAlbum();
@@ -859,7 +859,11 @@ TestCase {
         app.openAlbum("alb-unopened");
         tryCompare(find("itemGrid"), "count", 12);
         verify(find("item-pending:alb-unopened:0"));
-        compare(findChild(app.albumView, "albumAwaiting"), null, "cells, not the spinner");
+        tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner over them from the start");
+        compare(find("albumAwaiting").width, Units.gu(12.8), "the large one: Onyx's 128px at the TouchPad's scale");
+        var frame = findChild(find("item-pending:alb-unopened:0"), "placeholder");
+        verify(/pending-frame\.png$/.test(frame.source.toString()), frame.source);
+        compare(frame.width, frame.parent.width, "the frame is the whole cell");
         bus.calls = [];
         tap(find("item-pending:alb-unopened:0"));
         verify(!app.picture.isOpen, "a cell with no picture yet opens nothing");
@@ -871,6 +875,7 @@ TestCase {
         compare(find("albumCounts").text, "1 image");
         app.store._setLoading("alb-unopened", false);
         tryCompare(find("itemGrid"), "count", 1, 1000, "listed: only what came");
+        tryVerify(function() { return findChild(app.albumView, "albumAwaiting") === null; }, 1000, "in: no spinner");
         app.closeAlbum();
         bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched } };
         app.store.setEntries(albums, images, Fixtures.videos());
