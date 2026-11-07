@@ -550,6 +550,19 @@ function formatBytes(n) {
     return (mb >= 10 || mb === Math.floor(mb) ? Math.round(mb) : Math.round(mb * 10) / 10) + " MB";
 }
 
+// How long an opened album stays, as the Preferences page offers it: "30 days", 0 "Never"
+function expiryLabel(days) {
+    return days > 0 ? plural(days, "1 day", "#{num} days") : "Never";
+}
+
+// What the Preferences page says under the sizes, from getStorage's answer
+function storageExplanation(info) {
+    return "Past that, the pictures opened longest ago go back to the cloud"
+        + (info.expireDays > 0 ? ", and so do albums not opened for " + expiryLabel(info.expireDays) : "")
+        + ". Nothing is downloaded while less than " + formatBytes(info.floorBytes)
+        + " is free. Albums kept on the device stay.";
+}
+
 // Whether an album can be kept on the device: a cloud album of its own (not a virtual one)
 // Keep on Device keeps an album's own pictures: a folder of only sub-albums has none
 function canKeep(album) {

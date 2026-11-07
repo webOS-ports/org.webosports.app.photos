@@ -411,6 +411,14 @@ Item {
         });
     }
 
+    // How many days an opened album stays before its photos go back to the cloud; 0: never
+    function setExpiry(days, done) {
+        _change("setStorage", { expireDays: days }, "Could not change how long albums stay", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
     // Every opened album not kept back to its cloud
     function clearDownloads(done) {
         _change("clearDownloads", {}, "Could not clear the downloaded photos", function(ok, r) {

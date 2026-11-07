@@ -427,6 +427,19 @@ TestCase {
         compare(Library.thumbnailPath(cells[0], 256), "", "a placeholder: no file");
     }
 
+    function test_expiry() {
+        compare(Library.expiryLabel(30), "30 days");
+        compare(Library.expiryLabel(1), "1 day");
+        compare(Library.expiryLabel(0), "Never");
+        var info = { expireDays: 7, floorBytes: 1024 * 1024 * 1024 };
+        compare(Library.storageExplanation(info), "Past that, the pictures opened longest ago go back to the cloud, "
+                + "and so do albums not opened for 7 days. Nothing is downloaded while less than 1 GB is free. "
+                + "Albums kept on the device stay.");
+        info.expireDays = 0;
+        compare(Library.storageExplanation(info), "Past that, the pictures opened longest ago go back to the cloud. "
+                + "Nothing is downloaded while less than 1 GB is free. Albums kept on the device stay.", "never: not said");
+    }
+
     function test_formatBytes() {
         var MB = 1024 * 1024;
         compare(Library.formatBytes(0), "0 MB");

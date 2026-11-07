@@ -68,6 +68,10 @@ Item {
         store.setStorage(bytes, function(r) { if (prefs._usable(r)) prefs.info = r; });
     }
 
+    function setExpiry(days) {
+        store.setExpiry(days, function(r) { if (prefs._usable(r)) prefs.info = r; });
+    }
+
     function askClear() {
         appWindow.confirm.ask({ title: "Clear Downloaded Photos",
                             message: "Albums you have opened go back to the cloud; albums kept on the device stay.",
@@ -157,14 +161,22 @@ Item {
                     value: prefs.info ? prefs.info.capBytes : 0
                     onChosen: (v) => prefs.setCap(v)
                 }
+                LabelAndSelector {
+                    objectName: "storageExpirySelector"
+                    // An older service has no expireChoices: its 30 days, not to be changed
+                    visible: !!(prefs.info && prefs.info.expireChoices)
+                    label: "Clear albums not opened for"
+                    model: prefs.info && prefs.info.expireChoices ? prefs.info.expireChoices.map(function(d) { return Library.expiryLabel(d); }) : []
+                    values: prefs.info && prefs.info.expireChoices ? prefs.info.expireChoices : []
+                    value: prefs.info ? prefs.info.expireDays : 0
+                    onChosen: (v) => prefs.setExpiry(v)
+                }
             }
 
             ExplanationText {
                 Layout.fillWidth: true
                 visible: prefs.info !== null
-                text: prefs.info ? "Past that, the pictures opened longest ago go back to the cloud. "
-                                   + "Albums not opened for " + prefs.info.expireDays + " days go back too, and nothing is downloaded while less than "
-                                   + Library.formatBytes(prefs.info.floorBytes) + " is free. Albums kept on the device stay." : ""
+                text: prefs.info ? Library.storageExplanation(prefs.info) : ""
             }
 
             FormGroup {

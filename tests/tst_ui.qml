@@ -1077,10 +1077,14 @@ TestCase {
         var MB = 1024 * 1024;
         var info = { returnValue: true, capBytes: 200 * MB, capChoices: [100 * MB, 200 * MB, 500 * MB, 1024 * MB, 2048 * MB],
                      capNowBytes: 200 * MB, floorBytes: 1024 * MB, freeBytes: 12.5 * 1024 * MB, expireDays: 30,
+                     expireChoices: [7, 14, 30, 60, 90, 0],
                      originals: { count: 12, bytes: 41.3 * MB }, kept: { albums: 1, count: 13, bytes: 45.6 * MB }, otherBytes: 3 * MB };
         bus.replies = { "luna://com.palm.service.photos/getStorage": info,
                         "luna://com.palm.service.photos/setStorage": function(p) {
-                            var r = JSON.parse(JSON.stringify(info)); r.capBytes = p.capBytes; r.capNowBytes = p.capBytes; return r; },
+                            var r = JSON.parse(JSON.stringify(info));
+                            if (p.capBytes !== undefined) { r.capBytes = p.capBytes; r.capNowBytes = p.capBytes; }
+                            if (p.expireDays !== undefined) r.expireDays = p.expireDays;
+                            return r; },
                         "luna://com.palm.service.photos/clearDownloads": function() {
                             var r = JSON.parse(JSON.stringify(info)); r.originals = { count: 0, bytes: 0 };
                             r.cleared = { albums: 3, photos: 39 }; return r; } };
@@ -1110,6 +1114,15 @@ TestCase {
         compare(lastCall("luna://com.palm.service.photos/setStorage"), { capBytes: 500 * MB });
         tryCompare(combo, "currentIndex", 2);
         compare(find("storagePictures").value, "41 MB of 500 MB");
+        // How long an opened album stays: chosen the same way, the explanation following it
+        var expiry = find("storageExpirySelector");
+        var days = expiry.children.filter(function(c) { return c.popup !== undefined; })[0];
+        compare(days.model, ["7 days", "14 days", "30 days", "60 days", "90 days", "Never"]);
+        compare(days.displayText, "30 days");
+        days.currentIndex = 5;
+        days.activated(5);
+        compare(lastCall("luna://com.palm.service.photos/setStorage"), { expireDays: 0 });
+        tryCompare(days, "displayText", "Never");
         // Clearing: asked first (scrolled to, on a small screen)
         var flick = find("preferencesFlick");
         flick.contentY = Math.max(0, flick.contentHeight - flick.height);
