@@ -885,7 +885,8 @@ TestCase {
         bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched },
                         "luna://com.palm.service.photos/syncAlbum": null };
         app.openAlbum("alb-unopened");
-        tryCompare(find("itemGrid"), "count", 3);
+        wait(100);
+        tryCompare(find("itemGrid"), "count", 2);
         verify(find("item-pending:alb-unopened:0"));
         tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner over them from the start");
         compare(find("albumAwaiting").width, Units.gu(12.8), "the large one: Onyx's 128px at the TouchPad's scale");
@@ -898,7 +899,7 @@ TestCase {
         var arrived = [{ _id: "img-u1", albumId: "alb-unopened", path: root + "/pictures/Holiday/beach.jpg", mediaType: "image",
                          type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400002 }];
         app.store.setEntries(albums, images.concat(arrived), Fixtures.videos());
-        tryCompare(find("itemGrid"), "count", 3);
+        tryCompare(find("itemGrid"), "count", 2);
         verify(find("item-img-u1"));
         compare(find("albumCounts").text, "1 image");
         app.store._setLoading("alb-unopened", false);

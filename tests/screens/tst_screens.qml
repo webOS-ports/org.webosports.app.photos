@@ -86,6 +86,21 @@ TestCase {
         return it;
     }
 
+    function listFlowItemAtIndex(listFlowItem, index) {
+        // each delegate is a row of photos, so iterate the rows until
+        // one containing the global index is found
+        var nbItemsToSkip = index;
+        for (var i = 0; i < listFlowItem.count; i++ ) {
+            var rowItem = listFlowItem.itemAtIndex(i);
+            if (nbItemsToSkip < rowItem.children.length - 1/* don't count the Repeater */) {
+                // this is the row
+                return rowItem.children[nbItemsToSkip];
+            }
+            nbItemsToSkip -= (rowItem.children.length-1);
+        }
+        return null;
+    }
+
     function tap(item) {
         if (item.parent)
             waitForItemPolished(item.parent);

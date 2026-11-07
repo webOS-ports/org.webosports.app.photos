@@ -44,7 +44,7 @@ ListView {
     model: flowListModel
     boundsBehavior: Flickable.StopAtBounds
 
-    spacing: 5
+    spacing: Units.gu(0.2)
 
     readonly property real rowHeight: Units.gu(12)
     property ListModel flowListModel: ListModel {}
@@ -52,46 +52,84 @@ ListView {
     onItemsChanged: fillPhotoList();
     onWidthChanged: fillPhotoList();
 
+    function _setOrInsertPhotoRow(idxCurrentRow, lineContentArray, lineHeight) {
+        // Compare this line to the previous existing line, if any
+        if (flowListModel.count > idxCurrentRow) {
+            let previousRowModel = flowListModel.get(idxCurrentRow);
+            if (lineContentArray.length !== previousRowModel.lineContent.count ||
+                lineContentArray.some((linePhoto, index) => {
+                      let previousLinePhoto = previousRowModel.lineContent.get(index);
+                      return previousLinePhoto.photo._id !== linePhoto.photo._id;
+                }))
+            {
+                // row has changed: set new value
+                flowListModel.set(idxCurrentRow, {lineHeight: lineHeight, lineContent: lineContentArray});
+            }
+            else {
+                // even if the row contains the same photos, update the photos scaling and line height
+                lineContentArray.forEach((linePhoto, index) => {
+                    previousRowModel.lineContent.get(index).scaling = linePhoto.scaling;
+                });
+                previousRowModel.lineHeight = lineHeight;
+            }
+        }
+        else {
+            flowListModel.append({lineHeight: lineHeight, lineContent: lineContentArray});
+        }
+    }
+
     function fillPhotoList() {
         // recompute the preferred scaling of each photo, line by line
         const maxWidth = root.width;
         const wantedHeight = root.rowHeight;
         var currentWidth=0;
 
+        var idxCurrentRow = 0;
         var lineContentArray = []
-        flowListModel.clear();
 
         for(let currentPhoto of root.items) {
             // setup fallback height and width to a square of the line's height
-            if (!currentPhoto.height) currentPhoto.height = wantedHeight;
-            if (!currentPhoto.width) currentPhoto.width = wantedHeight;
+            const currentPhotoHeight = currentPhoto.height || wantedHeight;
+            const currentPhotoWidth  = currentPhoto.width  || wantedHeight;
 
             // compute this photo's scaling to fit the wanted height, and
             // use it to compute the photo's scaled width keeping aspect ratio
-            const currentHeightScaling = wantedHeight / currentPhoto.height;
-            const nextWidth = root.spacing + currentPhoto.width * currentHeightScaling;
+            const currentHeightScaling = wantedHeight / currentPhotoHeight;
+            const nextWidth = currentPhotoWidth * currentHeightScaling;
 
-            // if the photo overflows the listview's width, adjust the scaling and commit the line
-            if( currentWidth+nextWidth > maxWidth ) {
-                var widthScaling = maxWidth/currentWidth;
+            if (currentWidth>0) currentWidth += root.spacing;
+            currentWidth += nextWidth;
+
+            lineContentArray.push({photo: currentPhoto, scaling: currentHeightScaling});
+
+            // if the last photo overflows the listview's width, adjust the scaling and commit the line
+            if( currentWidth > maxWidth ) {
+                var cumulatedSpacing = root.spacing * lineContentArray.length;
+                var widthScaling = (maxWidth-cumulatedSpacing)/(currentWidth-cumulatedSpacing);
 
                 // compute the final scaling for each photo
                 for( let linePhoto of lineContentArray ) {
-                    linePhoto.scaling=widthScaling * wantedHeight / linePhoto.photo.height;
+                    linePhoto.scaling=widthScaling * wantedHeight / (linePhoto.photo.height || wantedHeight);
                 }
 
                 // commit this line to the global model, and start a new one
-                flowListModel.append({lineHeight: wantedHeight*widthScaling, lineContent: lineContentArray});
+                _setOrInsertPhotoRow(idxCurrentRow, lineContentArray, wantedHeight*widthScaling)
                 lineContentArray = [];
 
                 // reset counters
                 currentWidth = 0;
+                idxCurrentRow++;
             }
-
-            lineContentArray.push({photo: currentPhoto, scaling: currentHeightScaling});
-            currentWidth += nextWidth;
         }
-        flowListModel.append({lineHeight: wantedHeight, lineContent: lineContentArray });
+        // commit last incomplete row
+        if (lineContentArray.length>0) {
+            _setOrInsertPhotoRow(idxCurrentRow++, lineContentArray, wantedHeight*widthScaling)
+        }
+
+        // Remove lines that aren't there anymore
+        if (flowListModel.count>idxCurrentRow) {
+            flowListModel.remove(idxCurrentRow, flowListModel.count-idxCurrentRow);
+        }
     }
 
     delegate: Row {
@@ -108,8 +146,8 @@ ListView {
 
                 property var modelData: photo
 
-                height: modelData.height * scaling
-                width: modelData.width * scaling
+                height: (modelData.height || root.rowHeight) * scaling
+                width: (modelData.width || root.rowHeight) * scaling
 
                 picked: root.selecting && Library.isSelected(root.selection, modelData._id)
                 gridSelecting: root.selecting

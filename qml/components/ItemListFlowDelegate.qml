@@ -49,7 +49,7 @@ Item {
         anchors.margins: 1
         height: Units.gu(3)
         visible: modelData.mediaType === "video"
-        opacity: grid.selecting && !cell.picked ? 0.4 : 1.0
+        opacity: cell.gridSelecting && !cell.picked ? 0.4 : 1.0
         color: "#b0000000"
         Image {
             id: videoSign
