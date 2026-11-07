@@ -49,6 +49,11 @@ TestCase {
         id: bus
     }
 
+    // A binding that loops is a bug (one in the album being opened went unseen)
+    function init() {
+        failOnWarning(/Binding loop detected/);
+    }
+
     function init_data() {
         return [{ tag: Settings.profileName + " " + Settings.displayWidth + "x" + Settings.displayHeight }];
     }
@@ -250,12 +255,11 @@ TestCase {
         bus.push({ accountId: "acc-dropbox", syncStatus: "syncing" });
         tryVerify(function() { return findChild(find("library-acc-dropbox"), "rowBusy") !== null; });
         bus.push({ accountId: "acc-dropbox", syncStatus: "idle", error: "Network down" });
-        tryCompare(app, "notice", "Network down");
-        compare(app.noticeTitle, "Syncing failed");
-        compare(findChild(find("notice"), "noticeTitle").text, "Syncing failed", "shown in bold above");
-        shot("sync-failed");
-        tap(find("noticeCloseButton"));
-        compare(app.notice, "");
+        tryVerify(function() { return bus.callsTo("luna://com.webos.notification/createToast").length > 0; });
+        compare(lastCall("luna://com.webos.notification/createToast"),
+                { type: "light", sourceId: "org.webosports.app.photos", message: "Syncing failed: Network down",
+                  iconUrl: app.syncGlyph }, "a banner that goes by");
+        compare(app.notice, "", "not the in-app notice");
     }
 
     function test_02_album() {
@@ -659,6 +663,16 @@ TestCase {
         show.go(-1);
         show.go(-1);
         compare(show.currentItem._id, "img-h1", "round at the ends");
+        // A photo whose file changes under the slideshow (its whole picture came down, or
+        // went back to the cloud): shown from where it is now
+        var moved = Fixtures.images().map(function(i) { if (i._id === "img-h1") i.path = i.path.replace("beach.jpg", "forest.png"); return i; });
+        app.store.setEntries(Fixtures.albums(), moved, Fixtures.videos());
+        verify(/forest\.png$/.test(find("slideFront").source.toString()), find("slideFront").source);
+        show.go(1);
+        show.go(-1);
+        verify(/forest\.png$/.test(find("slideFront").source.toString()), "and when it comes round again");
+        app.store.setEntries(Fixtures.albums(), Fixtures.images(), Fixtures.videos());
+        verify(/beach\.jpg$/.test(find("slideFront").source.toString()), find("slideFront").source);
         wait(700);
         shot("slideshow");
         // A swipe goes on, a tap ends it.
@@ -779,14 +793,17 @@ TestCase {
         var labels = [];
         for (var i = 0; i < app.appMenu.count; i++)
             labels.push(app.appMenu.itemAt(i).text);
-        compare(labels, ["New Album", "Sync Now", "Preferences & Accounts"]);
+        compare(labels, ["New Album", "Sync Now", "Keep on Device", "Preferences & Accounts"]);
+        verify(app.appMenu.itemAt(2).visible && !app.appMenu.itemAt(2).enabled, "Keep on Device: shown, greyed out with no cloud album open");
         // At the window's top left, over the app, as the shell's app menu
         compare(app.appMenu.parent, app.contentItem);
         var at = app.appMenu.contentItem.mapToItem(app.contentItem, 0, 0);
         verify(at.x < Units.gu(4) && at.y < Units.gu(4), "at the top left: " + at.x + "," + at.y);
         shot("app-menu");
-        app.appMenu.itemAt(2).triggered();
-        compare(launches[0].id, "com.palm.app.accounts");
+        app.appMenu.itemAt(3).triggered();
+        verify(app.preferencesView.isOpen, "Preferences & Accounts: the app's own page");
+        compare(app.preferencesView.info, null, "an answer without the numbers: taken as none");
+        app.preferencesView.close();
         app.appMenu.itemAt(1).triggered();
         verify(bus.callsTo("luna://com.palm.service.photos/remoteSyncAlbums").length > 0);
         app.appMenu.close();
@@ -835,19 +852,49 @@ TestCase {
         app.openAlbum("alb-unopened");
         compare(lastCall("luna://com.palm.service.photos/syncAlbum"), { albumId: "alb-unopened" });
         compare(find("albumCounts").text, "12 images");
-        verify(find("albumAwaiting").running);
+        tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner while it lists");
         compare(findChild(app.albumView, "emptyAlbum"), null, "not shown as empty");
+        // While it is being listed: a cell for each picture it has, filled as they come
+        app.closeAlbum();
+        albums[albums.length - 1].coverPath = root + "/pictures/Holiday/forest.png";
+        app.store.setEntries(albums, images, Fixtures.videos());
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched },
+                        "luna://com.palm.service.photos/syncAlbum": null };
+        app.openAlbum("alb-unopened");
+        tryCompare(find("itemGrid"), "count", 12);
+        verify(find("item-pending:alb-unopened:0"));
+        tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner over them from the start");
+        compare(find("albumAwaiting").width, Units.gu(12.8), "the large one: Onyx's 128px at the TouchPad's scale");
+        var frame = findChild(find("item-pending:alb-unopened:0"), "placeholder");
+        verify(/pending-frame\.png$/.test(frame.source.toString()), frame.source);
+        compare(frame.width, frame.parent.width, "the frame is the whole cell");
+        bus.calls = [];
+        tap(find("item-pending:alb-unopened:0"));
+        verify(!app.picture.isOpen, "a cell with no picture yet opens nothing");
+        var arrived = [{ _id: "img-u1", albumId: "alb-unopened", path: root + "/pictures/Holiday/beach.jpg", mediaType: "image",
+                         type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400002 }];
+        app.store.setEntries(albums, images.concat(arrived), Fixtures.videos());
+        tryCompare(find("itemGrid"), "count", 12);
+        verify(find("item-img-u1"));
+        compare(find("albumCounts").text, "1 image");
+        app.store._setLoading("alb-unopened", false);
+        tryCompare(find("itemGrid"), "count", 1, 1000, "listed: only what came");
+        tryVerify(function() { return findChild(app.albumView, "albumAwaiting") === null; }, 1000, "in: no spinner");
+        app.closeAlbum();
+        bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched } };
+        app.store.setEntries(albums, images, Fixtures.videos());
         // One that cannot be listed: the user is told
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorText: "offline" };
         app.openAlbum("alb-dropbox");
-        compare(app.noticeTitle, "Could not load the album");
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not load the album: offline");
+        compare(app.notice, "", "a banner, not the in-app notice");
         // An older service, which has no syncAlbum, has every photo here already: no failure
-        app.noticeTitle = "";
+        var banners = bus.callsTo("luna://com.webos.notification/createToast").length;
         app.closeAlbum();
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorCode: -1,
                                                                    errorText: "Unknown method syncAlbum" };
         app.openAlbum("alb-dropbox");
-        compare(app.noticeTitle, "");
+        compare(bus.callsTo("luna://com.webos.notification/createToast").length, banners);
         app.closeAlbum();
         delete bus.replies["luna://com.palm.service.photos/syncAlbum"];
         bus.calls = [];
@@ -883,7 +930,7 @@ TestCase {
         var sent = launches.length;
         tap(find("shareButton"));
         compare(launches.length, sent);
-        compare(app.noticeTitle, "Could not download the picture");
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not download the picture: offline");
     }
 
     function test_19_subAlbums() {
@@ -1023,5 +1070,166 @@ TestCase {
         keysLeft = find("addToAlbumButton").mapToItem(app.contentItem, 0, 0).x;
         verify(picked.mapToItem(app.contentItem, picked.contentWidth, 0).x <= keysLeft,
                "\"0 Selected\" ends before Add to Album");
+    }
+
+    function test_21_storage() {
+        startApp();
+        var MB = 1024 * 1024;
+        var info = { returnValue: true, capBytes: 200 * MB, capChoices: [100 * MB, 200 * MB, 500 * MB, 1024 * MB, 2048 * MB],
+                     capNowBytes: 200 * MB, floorBytes: 1024 * MB, freeBytes: 12.5 * 1024 * MB, expireDays: 30,
+                     expireChoices: [7, 14, 30, 60, 90, 0],
+                     originals: { count: 12, bytes: 41.3 * MB }, kept: { albums: 1, count: 13, bytes: 45.6 * MB }, otherBytes: 3 * MB };
+        bus.replies = { "luna://com.palm.service.photos/getStorage": info,
+                        "luna://com.palm.service.photos/setStorage": function(p) {
+                            var r = JSON.parse(JSON.stringify(info));
+                            if (p.capBytes !== undefined) { r.capBytes = p.capBytes; r.capNowBytes = p.capBytes; }
+                            if (p.expireDays !== undefined) r.expireDays = p.expireDays;
+                            return r; },
+                        "luna://com.palm.service.photos/clearDownloads": function() {
+                            var r = JSON.parse(JSON.stringify(info)); r.originals = { count: 0, bytes: 0 };
+                            r.cleared = { albums: 3, photos: 39 }; return r; } };
+        app.openAppMenu();
+        app.appMenu.itemAt(3).triggered();
+        app.appMenu.close();
+        verify(app.preferencesView.isOpen);
+        compare(lastCall("luna://com.palm.service.photos/getStorage"), {});
+        compare(find("storagePictures").value, "41 MB of 200 MB");
+        compare(find("storageKept").value, "1 album, 46 MB");
+        compare(find("storageOther").value, "3 MB");
+        compare(find("storageFree").value, "13 GB");
+        // The size: a list selector, as in the other apps' preferences, on a light page
+        var cap = find("storageCapSelector");
+        var combo = cap.children.filter(function(c) { return c.popup !== undefined; })[0];
+        verify(combo, "a ComboBox");
+        compare(combo.model, ["100 MB", "200 MB", "500 MB", "1 GB", "2 GB"]);
+        compare(combo.currentIndex, 1, "the size in force");
+        compare(combo.displayText, "200 MB");
+        verify(find("preferencesHeader"), "LuneOS.Forms' light header");
+        shot("preferences");
+        mouseClick(combo);
+        tryVerify(function() { return combo.popup.opened; }, 2000, "its list opens");
+        combo.popup.close();
+        combo.currentIndex = 2;
+        combo.activated(2);
+        compare(lastCall("luna://com.palm.service.photos/setStorage"), { capBytes: 500 * MB });
+        tryCompare(combo, "currentIndex", 2);
+        compare(find("storagePictures").value, "41 MB of 500 MB");
+        // How long an opened album stays: chosen the same way, the explanation following it
+        var expiry = find("storageExpirySelector");
+        var days = expiry.children.filter(function(c) { return c.popup !== undefined; })[0];
+        compare(days.model, ["7 days", "14 days", "30 days", "60 days", "90 days", "Never"]);
+        compare(days.displayText, "30 days");
+        days.currentIndex = 5;
+        days.activated(5);
+        compare(lastCall("luna://com.palm.service.photos/setStorage"), { expireDays: 0 });
+        tryCompare(days, "displayText", "Never");
+        // Clearing: asked first (scrolled to, on a small screen)
+        var flick = find("preferencesFlick");
+        flick.contentY = Math.max(0, flick.contentHeight - flick.height);
+        wait(50);
+        tap(find("clearDownloadsButton"));
+        cancel(app.confirm);
+        compare(bus.callsTo("luna://com.palm.service.photos/clearDownloads").length, 0);
+        var clearReply = bus.replies["luna://com.palm.service.photos/clearDownloads"];
+        bus.replies["luna://com.palm.service.photos/clearDownloads"] = null;     // still running
+        tap(find("clearDownloadsButton"));
+        accept(app.confirm);
+        compare(bus.callsTo("luna://com.palm.service.photos/clearDownloads").length, 1);
+        verify(app.preferencesView.clearing);
+        verify(find("clearingBusy").running);
+        verify(!find("clearDownloadsButton").enabled, "not twice at once");
+        app.preferencesView.clearing = false;
+        bus.replies["luna://com.palm.service.photos/clearDownloads"] = clearReply;
+        tap(find("clearDownloadsButton"));
+        accept(app.confirm);
+        verify(!app.preferencesView.clearing, "answered: done");
+        compare(find("storagePictures").value, "0 MB of 200 MB");
+        // The accounts, from here
+        tap(find("accountsButton"));
+        compare(launches[launches.length - 1].id, "com.palm.app.accounts");
+        // Back closes it; a service that cannot say: told so
+        keyClick(Qt.Key_Escape);
+        verify(!app.preferencesView.isOpen);
+        bus.replies["luna://com.palm.service.photos/getStorage"] = { returnValue: false, errorText: "Unknown method getStorage" };
+        app.preferencesView.open();
+        verify(find("storageUnavailable"));
+        compare(findChild(app.preferencesView, "clearDownloadsButton"), null);
+        app.preferencesView.close();
+
+        // Keep on Device: a cloud album open
+        app.openAlbum("alb-holiday");
+        app.openAppMenu();
+        verify(app.appMenu.itemAt(2).visible, "the menu is static");
+        verify(!app.appMenu.itemAt(2).enabled, "a device album: greyed out");
+        app.appMenu.close();
+        bus.replies["luna://com.palm.service.photos/keepAlbum"] = null;
+        app.openAlbum("alb-dropbox");
+        app.openAppMenu();
+        verify(app.appMenu.itemAt(2).enabled);
+        verify(!app.appMenu.itemAt(2).checked);
+        app.appMenu.itemAt(2).triggered();
+        app.appMenu.close();
+        compare(lastCall("luna://com.palm.service.photos/keepAlbum"), { albumId: "alb-dropbox", keep: true });
+        // As webOS's sync: a banner when it starts...
+        var toast = lastCall("luna://com.webos.notification/createToast");
+        compare(toast.message, "Camera Uploads: Downloading album...");
+        compare(toast.sourceId, "org.webosports.app.photos");
+        compare(toast.type, "light", "goes by: not kept in the notification list");
+        compare(toast.iconUrl, app.syncGlyph);
+        compare(app.notice, "", "a banner, not the in-app notice");
+        // ...a dashboard while it runs: the account's icon, the album, what it does
+        var dash = findChild(app, "keepDashboardLoader");
+        verify(dash.active);
+        compare(dash.item.title, "Camera Uploads");
+        compare(dash.item.count, 1);
+        compare(dash.item.smallIcon, app.syncGlyph);
+        compare(dash.item.icon.toString(), app.libraryIcon({ accountId: "acc-dropbox", templateId: (app.store.accounts["acc-dropbox"] || {}).templateId }).toString());
+        compare(findChild(dash.item, "keepDashboardText").text, "Downloading album...");
+        // Two at once: the latest, and how many
+        var other = { _id: "alb-other", title: "Other", accountId: "acc-dropbox" };
+        app.keepStarted(other);
+        compare(dash.item.count, 2);
+        compare(dash.item.title, "Other");
+        verify(findChild(dash.item, "keepDashboardCount").visible);
+        app.keepStarted(other);
+        compare(dash.item.count, 2, "the same album once");
+        var banners = bus.callsTo("luna://com.webos.notification/createToast").length;
+        app.keepEnded(other, null);
+        compare(dash.item.count, 1);
+        compare(dash.item.title, "Camera Uploads");
+        compare(bus.callsTo("luna://com.webos.notification/createToast").length, banners, "failed: the store tells, no banner");
+        // A tap opens the album
+        dash.item.tapped();
+        compare(launches[launches.length - 1].id, "org.webosports.app.photos");
+        compare(launches[launches.length - 1].params, { albumID: "alb-dropbox" });
+        // Swiped away: away while this one comes down
+        dash.item.dismissed();
+        wait(0);
+        verify(!dash.active);
+        // ...a banner when it is done, and the dashboard gone
+        app.keepEnded(app.store.album("alb-dropbox"), { keep: true, photos: 2, fetched: 2, failed: 0 });
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Camera Uploads: Download completed");
+        verify(!app.keepDashboardDismissed, "the next one has its dashboard again");
+        verify(!dash.active);
+        // Let go of: no banner
+        var albums = Fixtures.albums().map(function(a) { if (a._id === "alb-dropbox") a.keep = true; return a; });
+        app.store.setEntries(albums, Fixtures.images(), Fixtures.videos());
+        bus.replies["luna://com.palm.service.photos/keepAlbum"] = { returnValue: true, keep: false };
+        bus.calls = bus.calls.filter(function(c) { return c.uri !== "luna://com.webos.notification/createToast"; });
+        app.toggleKeep(app.store.album("alb-dropbox"));
+        compare(lastCall("luna://com.palm.service.photos/keepAlbum"), { albumId: "alb-dropbox", keep: false }, "kept: no longer");
+        compare(bus.callsTo("luna://com.webos.notification/createToast").length, 0, "no banner for that");
+        verify(!dash.active);
+        // Some could not come down: how many did
+        app.store.setEntries(Fixtures.albums(), Fixtures.images(), Fixtures.videos());
+        bus.replies["luna://com.palm.service.photos/keepAlbum"] = { returnValue: true, keep: true, photos: 13, fetched: 11, failed: 2 };
+        app.toggleKeep(app.store.album("alb-dropbox"));
+        compare(lastCall("luna://com.palm.service.photos/keepAlbum"), { albumId: "alb-dropbox", keep: true });
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Camera Uploads: 11 of 13 pictures downloaded");
+        verify(!dash.active);
+        bus.replies["luna://com.palm.service.photos/keepAlbum"] = { returnValue: false, errorText: "not enough free space" };
+        app.toggleKeep(app.store.album("alb-dropbox"));
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not keep the album on the device: not enough free space");
+        app.closeAlbum();
     }
 }

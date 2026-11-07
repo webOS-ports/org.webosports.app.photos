@@ -95,8 +95,22 @@ Rectangle {
         timer.restart();
     }
 
+    // The photo as the store has it now: its file changes when its whole picture comes
+    // down or goes back to the cloud
     function _url(item) {
-        return item ? Library.fileUrl(Library.viewPath(item)) : "";
+        if (!item)
+            return "";
+        var now = store && store.item(item._id);
+        return Library.fileUrl(Library.viewPath(now || item));
+    }
+
+    // The library changed: the picture shown is shown from where it is now
+    function libraryChanged() {
+        if (!isOpen || !currentItem)
+            return;
+        var url = _url(currentItem);
+        if (url.toString() !== front.source.toString())
+            front.source = url;
     }
 
     // To the next (1) or previous (-1) picture, sliding in from that side.

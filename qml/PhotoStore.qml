@@ -147,11 +147,12 @@ Item {
         var got = _got;
         got[which] = true;
         _got = got;
-        // The first full answer at once; changes after a pause.
+        // The first full answer at once; changes at most every rebuildTimer.interval, also
+        // while they keep coming (an album's photos written one by one as they come down)
         if (status !== "ready" && got.albums && got.images && got.videos)
             _rebuild();
-        else if (status === "ready")
-            rebuildTimer.restart();
+        else if (status === "ready" && !rebuildTimer.running)
+            rebuildTimer.start();
     }
 
     Timer {
@@ -231,7 +232,15 @@ Item {
     }
 
     function _rebuild() {
-        lib = Library.build(_albums, _images, _videos, storageRoot);
+        var next = Library.build(_albums, _images, _videos, storageRoot);
+        // An album opened (syncAlbum) keeps the order its pictures came in: each new one at the end
+        for (var id in _arrivalOrder) {
+            var items = Library.stableOrder(_arrivalOrder[id], next.items[id] || []);
+            if (next.items[id])
+                next.items[id] = items;
+            _arrivalOrder[id] = items.map(function(it) { return it._id; });
+        }
+        lib = next;
         status = "ready";
         revision++;
     }
@@ -351,12 +360,85 @@ Item {
     // A cloud album being shown: the photos service lists its photos and brings their
     // previews down (it brings no album's photos before it has been opened). A service
     // from before syncAlbum has every photo here already: its "Unknown method" is no failure.
+    // The albums being listed now: { albumId: true }
+    property var loadingAlbums: ({})
+
+    function _setLoading(albumId, on) {
+        var next = {};
+        for (var k in loadingAlbums)
+            next[k] = true;
+        if (on)
+            next[albumId] = true;
+        else
+            delete next[albumId];
+        loadingAlbums = next;
+    }
+
+    // Opened albums: { albumId: [item _id, ...] } in the order shown since (_rebuild)
+    property var _arrivalOrder: ({})
+
     function syncAlbum(album) {
         if (!album || !album._id || album.virtual || !Library.isCloud(album))
             return;
-        _service("syncAlbum", { albumId: album._id }, function(r) {
+        var id = album._id;
+        // Opened again: newest first again; those coming in from now on after them
+        if (lib.items[id]) {
+            lib.items[id].sort(Library.compareItems);
+            // Not while the album opened is still being worked out (syncAlbum is called from there)
+            Qt.callLater(function() { store.revision++; });
+        }
+        _arrivalOrder[id] = (lib.items[id] || []).map(function(it) { return it._id; });
+        _setLoading(id, true);
+        _service("syncAlbum", { albumId: id }, function(r) {
+            store._setLoading(id, false);
             if (r && !r.returnValue && !/unknown method/i.test(String(r.errorText || r.msg || "")))
                 store.failed("Could not load the album", Library.serviceError(r));
+        });
+    }
+
+    // The storage the cloud photos take (the photos service's getStorage), to done(info), or
+    // done(null) when it cannot be read
+    function getStorage(done) {
+        _service("getStorage", {}, function(r) {
+            done(r && r.returnValue ? r : null);
+        });
+    }
+
+    function setStorage(capBytes, done) {
+        _change("setStorage", { capBytes: capBytes }, "Could not change the size", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
+    // How many days an opened album stays before its photos go back to the cloud; 0: never
+    function setExpiry(days, done) {
+        _change("setStorage", { expireDays: days }, "Could not change how long albums stay", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
+    // Every opened album not kept back to its cloud
+    function clearDownloads(done) {
+        _change("clearDownloads", {}, "Could not clear the downloaded photos", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
+        });
+    }
+
+    // An album kept on the device: all of it brought down, and never dropped. done(r) once
+    // it is down (or no longer kept)
+    signal keeping(var album)
+    function keepAlbum(album, keep, done) {
+        if (!Library.canKeep(album))
+            return;
+        if (keep)
+            keeping(album);
+        _change("keepAlbum", { albumId: album._id, keep: keep === true },
+                keep ? "Could not keep the album on the device" : "Could not change the album", function(ok, r) {
+            if (done)
+                done(ok ? r : null);
         });
     }
 

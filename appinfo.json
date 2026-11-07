@@ -17,7 +17,7 @@
     "exhibitionModeOptions": { "title": "Photos" },
     "requiredPermissions": [ "application.operation", "application.launcher", "database.operation",
                              "mediapermissions-service.operation", "photosservice.operation",
-                             "accountsservice.management", "systemsettings.management", "display.operation",
+                             "accountsservice.management", "systemsettings.management", "display.operation", "notification.operation",
                              "print.operation" ],
     "mimeTypes": [
         { "mime": "image/jpeg", "extension": "jpg" },

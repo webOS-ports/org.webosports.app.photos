@@ -29,13 +29,21 @@ import "../js/Images.js" as Images
  * service made, or the file scaled down when the thumbnail is too small
  * for the cell; a video without one shows the video sign. A thumbnail that
  * does not load (its file gone) says broken(), and the grid asks the
- * service for new ones.
+ * service for new ones. A cell held for a picture still on its way shows
+ * an empty frame.
  */
 LC.PlaceholderImage {
     id: thumb
 
     property var item: null
 
-    placeholder: Images.url(item && item.mediaType === "video" ? "blank-video" : "empty-thumbnail", Units.gridUnit)
+    // A picture still on its way (a cell held for it while its album is listed): webOS
+    // 3.0 Photos' empty frame, the whole cell, on the view's own background
+    readonly property bool pending: !!(item && item.pending)
+
+    placeholder: Images.url(pending ? "pending-frame" : item && item.mediaType === "video" ? "blank-video" : "empty-thumbnail", Units.gridUnit)
+    placeholderScale: pending ? 1 : 0.4
+    placeholderOpacity: pending ? 1 : 0.35
+    backgroundColor: pending ? "transparent" : "#2b2b2b"
     source: Library.fileUrl(Library.thumbnailPath(item, Math.max(width, height)))
 }

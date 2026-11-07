@@ -55,6 +55,16 @@ down and sends additions and deletions back up.
 | ![Year](docs/screenshots/sargo-ondemand-year.jpg) | ![Loading](docs/screenshots/sargo-ondemand-loading.jpg) | ![Month](docs/screenshots/sargo-ondemand-month.jpg) | ![Picture](docs/screenshots/sargo-ondemand-picture.jpg) |
 | Months not opened yet, with the gallery's counts | One opened: its previews on their way | 13 previews, 6 KB each | The whole picture, fetched when opened |
 
+| Pixel 3a, the same gallery with its covers | | | |
+|:---:|:---:|:---:|:---:|
+| ![Library](docs/screenshots/sargo-covers-library.jpg) | ![Year](docs/screenshots/sargo-covers-year.jpg) | ![Loading](docs/screenshots/sargo-covers-loading.jpg) | ![Month](docs/screenshots/sargo-covers-month.jpg) |
+| Years with the gallery's covers | Months not opened yet, each with its cover | One opened: the large spinner over a frame for each of its 13 pictures | Their previews in place |
+
+| Pixel 3a, how much the cloud photos take | | | | | |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| ![Preferences](docs/screenshots/sargo-storage-preferences.jpg) | ![Size](docs/screenshots/sargo-storage-size.jpg) | ![How long](docs/screenshots/sargo-storage-expiry.jpg) | ![Keep](docs/screenshots/sargo-storage-keep.jpg) | ![Downloading](docs/screenshots/sargo-storage-downloading.jpg) | ![Clearing](docs/screenshots/sargo-storage-clearing.jpg) |
+| Preferences & Accounts: the whole pictures against the cap, kept albums, the rest | The cap: from 100 MB, the sizes that fit (16 GB here, with 27 GB free) | How long an opened album stays: 7 to 90 days, or never | An album kept on the device, from the app menu | Its dashboard while it comes down, beside the USB one | Clearing the downloaded photos |
+
 The Pixel 3a pictures are PiGallery2 3.5.2 test galleries', taken on the
 device; the rest of the walk down the tree (`sargo-subalbums-*.jpg`) and
 the library of the 5.39 GB one (`sargo-ondemand-library.jpg`) are in

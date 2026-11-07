@@ -153,6 +153,30 @@ function compareItems(a, b) {
     return pa < pb ? -1 : (pa > pb ? 1 : 0);
 }
 
+/*
+ * items (in compareItems order) with those whose _id is in shown first, in that
+ * order, and the rest after them in theirs: an album's pictures as they come in,
+ * each new one at the end, so that those on the screen stay where they are.
+ * Those in shown that are gone are left out.
+ */
+function stableOrder(shown, items) {
+    var byId = {};
+    for (var i = 0; i < items.length; i++)
+        byId[items[i]._id] = items[i];
+    var out = [], taken = {};
+    for (var j = 0; j < shown.length; j++) {
+        var it = byId[shown[j]];
+        if (it) {
+            out.push(it);
+            taken[it._id] = true;
+        }
+    }
+    for (var k = 0; k < items.length; k++)
+        if (!taken[items[k]._id])
+            out.push(items[k]);
+    return out;
+}
+
 function compareTitles(a, b) {
     var ta = albumTitle(a).toLowerCase(), tb = albumTitle(b).toLowerCase();
     return ta < tb ? -1 : (ta > tb ? 1 : 0);
@@ -171,7 +195,8 @@ function compareAlbums(a, b) {
  *   { albums: [album...], byId: { id: album }, items: { albumId: [item...] },
  *     byItemId: { id: item }, children: { albumId: [album...] } }
  * Each album gets images, videos (counts), cover (its newest item, else
- * its first sub-album's), title, parent (its album's _id, or "") and
+ * the cover the photos service brought down for a cloud album not opened
+ * yet, else its first sub-album's), title, parent (its album's _id, or "") and
  * subAlbums (how many are in it); albums with showAlbum false are left
  * out, as webOS did. A sub-album's album has to be there, shown, of the
  * same account; one that is not, or a chain of them that comes back on
@@ -252,12 +277,19 @@ function build(albumEntries, imageEntries, videoEntries, root) {
 
     albums.forEach(function(a) {
         items[a._id].sort(compareItems);
-        a.cover = items[a._id].length > 0 ? items[a._id][0] : null;
+        a.cover = items[a._id].length > 0 ? items[a._id][0] : coverOf(a);
         a.title = albumTitle(a);
     });
     albums.sort(compareAlbums);
     var children = linkAlbums(albums, byId);
     return { albums: albums, byId: byId, items: items, byItemId: byItemId, children: children };
+}
+
+// A cloud album's cover file (coverPath) as an item a Thumbnail shows, or null
+function coverOf(album) {
+    if (!isCloud(album) || typeof album.coverPath !== "string" || album.coverPath === "")
+        return null;
+    return { _id: "cover:" + album._id, albumId: album._id, path: album.coverPath, mediaType: "image", cover: true };
 }
 
 // The parent each album can have (see build), its sub-albums, and the
@@ -485,6 +517,57 @@ function shownImages(album) {
  */
 function awaitingPictures(album) {
     return isCloud(album) && !album.virtual && album.images === 0 && album.videos === 0 && shownImages(album) > 0;
+}
+
+/*
+ * The cells to hold for an album's pictures still on their way while it is
+ * listed (loading): what it was told it has (total) less those here, at
+ * most maxPendingCells. None for any other album, or when it is not loading.
+ */
+var maxPendingCells = 2000;
+
+function pendingCells(album, here, loading) {
+    if (!loading || !isCloud(album) || album.virtual || !album.total || !(album.total.images > 0))
+        return 0;
+    return Math.min(maxPendingCells, Math.max(0, album.total.images - (here || 0)));
+}
+
+// count cells for pictures on their way: placeholders the grid shows
+function placeholders(albumId, count) {
+    var out = [];
+    for (var i = 0; i < count; i++)
+        out.push({ _id: "pending:" + albumId + ":" + i, albumId: albumId, mediaType: "image", pending: true });
+    return out;
+}
+
+// Bytes as the Preferences page shows them: "0 MB", "12.3 MB", "200 MB", "1.5 GB"
+function formatBytes(n) {
+    var mb = (n || 0) / (1024 * 1024);
+    if (mb >= 1024) {
+        var gb = mb / 1024;
+        return (gb >= 10 || gb === Math.floor(gb) ? Math.round(gb) : Math.round(gb * 10) / 10) + " GB";
+    }
+    return (mb >= 10 || mb === Math.floor(mb) ? Math.round(mb) : Math.round(mb * 10) / 10) + " MB";
+}
+
+// How long an opened album stays, as the Preferences page offers it: "30 days", 0 "Never"
+function expiryLabel(days) {
+    return days > 0 ? plural(days, "1 day", "#{num} days") : "Never";
+}
+
+// What the Preferences page says under the sizes, from getStorage's answer
+function storageExplanation(info) {
+    return "Past that, the pictures opened longest ago go back to the cloud"
+        + (info.expireDays > 0 ? ", and so do albums not opened for " + expiryLabel(info.expireDays) : "")
+        + ". Nothing is downloaded while less than " + formatBytes(info.floorBytes)
+        + " is free. Albums kept on the device stay.";
+}
+
+// Whether an album can be kept on the device: a cloud album of its own (not a virtual one)
+// Keep on Device keeps an album's own pictures: a folder of only sub-albums has none
+function canKeep(album) {
+    return isCloud(album) && !album.virtual
+        && (album.keep === true || !!(album.total && album.total.images > 0));
 }
 
 function countLabel(album) {

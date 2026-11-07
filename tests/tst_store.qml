@@ -163,6 +163,48 @@ TestCase {
         store.syncAlbum({ _id: "v", virtual: true, accountId: "acc-dropbox", type: "com.palm.dropbox" });
         store.syncAlbum(null);
         compare(bus.callsTo("luna://com.palm.service.photos/syncAlbum").length, 0, "device and virtual albums: none");
+
+        // Loading from the call until its answer, whatever it is
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": null };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], true);
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": { returnValue: false, errorText: "offline" } };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], undefined, "answered: no longer");
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": { busError: "gone" } };
+        store.syncAlbum(store.album("alb-dropbox"));
+        compare(store.loadingAlbums["alb-dropbox"], undefined, "a bus error too");
+    }
+
+    function test_storage() {
+        var got = "none";
+        bus.replies = { "luna://com.palm.service.photos/getStorage": { returnValue: true, capBytes: 7 } };
+        store.getStorage(function(r) { got = r; });
+        compare(got.capBytes, 7);
+        bus.replies = { "luna://com.palm.service.photos/getStorage": { returnValue: false, errorText: "x" } };
+        store.getStorage(function(r) { got = r; });
+        compare(got, null, "cannot be read: null, and no failure shown");
+        compare(failures.count, 0);
+        store.setStorage(100, function(r) { got = r; });
+        compare(last("setStorage"), { capBytes: 100 });
+        store.clearDownloads(function(r) { got = r; });
+        compare(last("clearDownloads"), {});
+        bus.replies = { "luna://com.palm.service.photos/clearDownloads": { returnValue: false, errorText: "busy" } };
+        store.clearDownloads(function(r) { got = r; });
+        compare(got, null);
+        compare(failures.count, 1, "a change that fails is shown");
+
+        var kept = [];
+        store.keeping.connect(function(a) { kept.push(a._id); });
+        store.keepAlbum(store.album("alb-dropbox"), true);
+        compare(last("keepAlbum"), { albumId: "alb-dropbox", keep: true });
+        compare(kept, ["alb-dropbox"]);
+        store.keepAlbum(store.album("alb-dropbox"), false);
+        compare(last("keepAlbum"), { albumId: "alb-dropbox", keep: false });
+        compare(kept, ["alb-dropbox"], "no longer kept: nothing to download");
+        bus.calls = [];
+        store.keepAlbum(store.album("alb-holiday"), true);
+        compare(bus.callsTo("luna://com.palm.service.photos/keepAlbum").length, 0, "a device album: no");
     }
 
     function test_withOriginal() {
@@ -259,5 +301,60 @@ TestCase {
         store.setLastPlayTime("img-h1", 3);
         verify(!store.item("img-h1").lastPlayTime, "a picture has none");
         store.setLastPlayTime("gone", 3);
+    }
+
+    // db8 answers while a sync writes photos one by one: the library follows them as they
+    // come, not only once they stop
+    function test_changesWhileTheyCome() {
+        var base = Fixtures.images();
+        var start = store.revision;
+        var arrived = [];
+        for (var n = 1; n <= 8; n++) {
+            arrived.push({ _id: "img-n" + n, albumId: "alb-holiday", path: "/r/pictures/Holiday/n" + n + ".jpg",
+                           mediaType: "image", type: "local", createdTime: 1791400000 + n, appCacheComplete: true });
+            var rows = base.concat(arrived);
+            store._took("images", { count: rows.length, get: function(i) { return rows[i]; } });
+            wait(200);
+        }
+        // 1.6 s of changes 200 ms apart: shown on the way, not once at the end
+        verify(store.revision - start >= 2, "rebuilt while they came: " + (store.revision - start));
+        verify(store.itemsOf("alb-holiday").length > 5, "some there before the last");
+        tryVerify(function() { return store.itemsOf("alb-holiday").length === 13; }, 1500, "and all once they stop");
+    }
+
+    function test_arrivalOrder() {
+        bus.replies = { "luna://com.palm.service.photos/syncAlbum": null };
+        var base = Fixtures.images();
+        var ids = function() { return store.itemsOf("alb-dropbox").map(function(i) { return i._id; }); };
+        function cloud(n, t) {
+            return { _id: "img-c" + n, albumId: "alb-dropbox", path: "/r/pictures/cloud/c" + n + ".jpg",
+                     mediaType: "image", type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: t };
+        }
+        function took(rows) {
+            store._took("images", { count: rows.length, get: function(i) { return rows[i]; } });
+            store._rebuild();
+        }
+        store.syncAlbum(store.album("alb-dropbox"));
+        var first = ids();
+        // Newer than those shown, and older: each at the end, as it comes in
+        took(base.concat([cloud(1, 1791500000)]));
+        compare(ids(), first.concat(["img-c1"]));
+        took(base.concat([cloud(1, 1791500000), cloud(2, 1700000000), cloud(3, 1791600000)]));
+        // Two in one go: in the grid's order between them
+        compare(ids(), first.concat(["img-c1", "img-c3", "img-c2"]));
+        // One gone: the rest stay
+        took(base.concat([cloud(2, 1700000000), cloud(3, 1791600000)]));
+        compare(ids(), first.concat(["img-c3", "img-c2"]));
+        // Opened again: newest first
+        var rev = store.revision;
+        store.syncAlbum(store.album("alb-dropbox"));
+        tryVerify(function() { return store.revision > rev; }, 1000, "shown again");
+        compare(ids()[0], "img-c3");
+        compare(ids()[ids().length - 1], "img-c2");
+        // Other albums: newest first
+        took(base.concat([cloud(2, 1700000000), cloud(3, 1791600000),
+                          { _id: "img-h9", albumId: "alb-holiday", path: "/r/pictures/Holiday/h9.jpg",
+                            mediaType: "image", type: "local", createdTime: 1799999999 }]));
+        compare(store.itemsOf("alb-holiday")[0]._id, "img-h9");
     }
 }

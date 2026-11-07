@@ -381,6 +381,85 @@ TestCase {
                 .map(function(i) { return i._id; }), ["img-pg-italy", "img-pg-rome", "img-pg-alps"]);
     }
 
+    function test_coversAndPendingCells() {
+        // Albums not opened yet: the cover the service brought down; a parent with none of its
+        // own takes its sub-album's; an album with photos here shows its newest
+        var lib = treeLib([
+            { _id: "alb-pg-y", name: "2018", accountId: "acc-pg2", type: "com.palm.pigallery2", showAlbum: true,
+              parentId: "", listed: false, total: { images: 0 } },
+            { _id: "alb-pg-m", name: "2018-01", accountId: "acc-pg2", type: "com.palm.pigallery2", showAlbum: true,
+              parentId: "alb-pg-y", listed: false, total: { images: 13 }, coverPath: "/r/.photosApp/m/.cover-1.jpg" },
+            { _id: "alb-pg-n", name: "2018-02", accountId: "acc-pg2", type: "com.palm.pigallery2", showAlbum: true,
+              parentId: "alb-pg-y", listed: false, total: { images: 5 }, coverPath: "" },
+            { _id: "alb-local-c", name: "Mine", accountId: "local", type: "local", showAlbum: true,
+              path: "/r/pictures/Mine", coverPath: "/r/pictures/Mine/x.jpg" }]);
+        var m = lib.byId["alb-pg-m"].cover;
+        compare(m.path, "/r/.photosApp/m/.cover-1.jpg");
+        compare(m.mediaType, "image");
+        verify(m.cover);
+        compare(Library.thumbnailPath(m, 256), "/r/.photosApp/m/.cover-1.jpg");
+        compare(lib.byId["alb-pg-y"].cover, m, "a parent with no cover: its sub-album's");
+        compare(lib.byId["alb-pg-n"].cover, null, "no cover file: none");
+        compare(lib.byId["alb-local-c"].cover, null, "a device album: never");
+        compare(lib.items["alb-pg-m"].length, 0, "the cover is no item of the album");
+        compare(lib.byItemId[m._id], undefined);
+        var italy = lib.byId["alb-pg-italy"];
+        italy.coverPath = "/r/.photosApp/i/.cover-2.jpg";
+        compare(Library.build([italy], Fixtures.treeImages(), [], "/r/pictures").byId["alb-pg-italy"].cover._id, "img-pg-italy",
+                "with photos here: its newest, not the cover");
+
+        // Cells held while an album is listed: what it was told less what is here
+        var unopened = lib.byId["alb-pg-m"];
+        compare(Library.pendingCells(unopened, 0, true), 13);
+        compare(Library.pendingCells(unopened, 4, true), 9);
+        compare(Library.pendingCells(unopened, 20, true), 0, "more here than told: none");
+        compare(Library.pendingCells(unopened, 0, false), 0, "not being listed: none");
+        compare(Library.pendingCells(lib.byId["alb-pg-y"], 0, true), 0, "told none: none");
+        compare(Library.pendingCells({ accountId: "local", type: "local", total: { images: 3 } }, 0, true), 0);
+        compare(Library.pendingCells({ accountId: "acc-pg2", type: "com.palm.pigallery2", virtual: true, total: { images: 3 } }, 0, true), 0);
+        compare(Library.pendingCells({ accountId: "acc-pg2", type: "com.palm.pigallery2", total: { images: 99999 } }, 0, true),
+                Library.maxPendingCells);
+        compare(Library.pendingCells(null, 0, true), 0);
+        var cells = Library.placeholders("alb-pg-m", 3);
+        compare(cells.length, 3);
+        verify(cells.every(function(c) { return c.pending === true && c.albumId === "alb-pg-m"; }));
+        compare(cells[2]._id, "pending:alb-pg-m:2");
+        compare(Library.thumbnailPath(cells[0], 256), "", "a placeholder: no file");
+    }
+
+    function test_expiry() {
+        compare(Library.expiryLabel(30), "30 days");
+        compare(Library.expiryLabel(1), "1 day");
+        compare(Library.expiryLabel(0), "Never");
+        var info = { expireDays: 7, floorBytes: 1024 * 1024 * 1024 };
+        compare(Library.storageExplanation(info), "Past that, the pictures opened longest ago go back to the cloud, "
+                + "and so do albums not opened for 7 days. Nothing is downloaded while less than 1 GB is free. "
+                + "Albums kept on the device stay.");
+        info.expireDays = 0;
+        compare(Library.storageExplanation(info), "Past that, the pictures opened longest ago go back to the cloud. "
+                + "Nothing is downloaded while less than 1 GB is free. Albums kept on the device stay.", "never: not said");
+    }
+
+    function test_formatBytes() {
+        var MB = 1024 * 1024;
+        compare(Library.formatBytes(0), "0 MB");
+        compare(Library.formatBytes(undefined), "0 MB");
+        compare(Library.formatBytes(3.47 * MB), "3.5 MB");
+        compare(Library.formatBytes(41.3 * MB), "41 MB", "from 10 MB: whole");
+        compare(Library.formatBytes(256 * 1024 * MB), "256 GB", "the largest size offered");
+        compare(Library.formatBytes(200 * MB), "200 MB");
+        compare(Library.formatBytes(1024 * MB), "1 GB");
+        compare(Library.formatBytes(1.5 * 1024 * MB), "1.5 GB");
+        compare(Library.formatBytes(12.5 * 1024 * MB), "13 GB");
+        verify(Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", total: { images: 13 } }));
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", total: { images: 0, videos: 2 } }), "only sub-albums, or videos");
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2" }), "nothing known yet");
+        verify(Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", keep: true, total: { images: 0 } }), "kept: may be let go");
+        verify(!Library.canKeep({ accountId: "acc-pg", type: "com.palm.pigallery2", virtual: true, total: { images: 13 } }));
+        verify(!Library.canKeep({ accountId: "local", type: "local" }));
+        verify(!Library.canKeep(null));
+    }
+
     function test_subAlbumsThatCannotBe() {
         var odd = function(id, parentId, extra) {
             var a = { _id: id, path: "/media/internal/.photosApp/x/" + id, name: id, accountId: "acc-pg2",
