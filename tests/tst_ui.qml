@@ -636,6 +636,16 @@ TestCase {
         show.go(-1);
         show.go(-1);
         compare(show.currentItem._id, "img-h1", "round at the ends");
+        // A photo whose file changes under the slideshow (its whole picture came down, or
+        // went back to the cloud): shown from where it is now
+        var moved = Fixtures.images().map(function(i) { if (i._id === "img-h1") i.path = i.path.replace("Holiday/", "Holiday/whole-"); return i; });
+        app.store.setEntries(Fixtures.albums(), moved, Fixtures.videos());
+        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") > 0, find("slideFront").source);
+        show.go(1);
+        show.go(-1);
+        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") > 0, "and when it comes round again");
+        app.store.setEntries(Fixtures.albums(), Fixtures.images(), Fixtures.videos());
+        verify(find("slideFront").source.toString().indexOf("Holiday/whole-") < 0);
         wait(700);
         shot("slideshow");
         // A swipe goes on, a tap ends it.
