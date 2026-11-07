@@ -162,7 +162,7 @@ Item {
             ExplanationText {
                 Layout.fillWidth: true
                 visible: prefs.info !== null
-                text: prefs.info ? "Past that, or 5% of the free space, the pictures opened longest ago go back to the cloud. "
+                text: prefs.info ? "Past that, the pictures opened longest ago go back to the cloud. "
                                    + "Albums not opened for " + prefs.info.expireDays + " days go back too, and nothing is downloaded while less than "
                                    + Library.formatBytes(prefs.info.floorBytes) + " is free. Albums kept on the device stay." : ""
             }

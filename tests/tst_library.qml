@@ -433,6 +433,7 @@ TestCase {
         compare(Library.formatBytes(undefined), "0 MB");
         compare(Library.formatBytes(3.47 * MB), "3.5 MB");
         compare(Library.formatBytes(41.3 * MB), "41 MB", "from 10 MB: whole");
+        compare(Library.formatBytes(256 * 1024 * MB), "256 GB", "the largest size offered");
         compare(Library.formatBytes(200 * MB), "200 MB");
         compare(Library.formatBytes(1024 * MB), "1 GB");
         compare(Library.formatBytes(1.5 * 1024 * MB), "1.5 GB");
