@@ -277,7 +277,7 @@ Rectangle {
         }
     }
 
-    ItemGrid {
+    ItemListFlow {
         id: grid
         objectName: "itemGrid"
         anchors.top: subAlbumRow.visible ? subAlbumRow.bottom : header.bottom

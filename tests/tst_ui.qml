@@ -153,6 +153,30 @@ TestCase {
         return it;
     }
 
+    function listFlowTotalCount(listFlowItem) {
+        // each delegate is a row of photos, so add them up
+        var totalCount = 0;
+        for (var i = 0; i < listFlowItem.count; i++ ) {
+            var rowItem = listFlowItem.itemAtIndex(i);
+            totalCount += rowItem.children.length - 1/* don't count the Repeater */;
+        }
+        return totalCount;
+    }
+    function listFlowItemAtIndex(listFlowItem, index) {
+        // each delegate is a row of photos, so iterate the rows until
+        // one containing the global index is found
+        var nbItemsToSkip = index;
+        for (var i = 0; i < listFlowItem.count; i++ ) {
+            var rowItem = listFlowItem.itemAtIndex(i);
+            if (nbItemsToSkip < rowItem.children.length - 1/* don't count the Repeater */) {
+                // this is the row
+                return rowItem.children[nbItemsToSkip];
+            }
+            nbItemsToSkip -= (rowItem.children.length-1);
+        }
+        return null;
+    }
+
     function tap(item) {
         verify(item.visible, "visible: " + item.objectName);
         // A row below the fold of the panel is scrolled to first, as a
@@ -270,7 +294,7 @@ TestCase {
         compare(find("albumTitle").text, "Holiday");
         compare(find("albumCounts").text, "4 images, 1 video");
         var grid = find("itemGrid");
-        compare(grid.count, 5);
+        compare(listFlowTotalCount(grid), 5);
         verify(find("albumSlideshowButton").visible);
         wait(200);
         shot("album");
@@ -351,9 +375,9 @@ TestCase {
         // Add Photos: the library to pick from.
         tap(find("addPhotosButton"));
         var picker = find("pickerGrid");
-        tryVerify(function() { return picker.count === 9; }, 2000, "the device's nine pictures and videos");
-        mouseClick(picker.itemAtIndex(0));
-        mouseClick(picker.itemAtIndex(2));
+        tryVerify(function() { return listFlowTotalCount(picker) === 9; }, 2000, "the device's nine pictures and videos");
+        mouseClick(listFlowItemAtIndex(picker, 0));
+        mouseClick(listFlowItemAtIndex(picker, 2));
         shot("add-photos");
         tap(find("pickerDone"));
         var p = photos("addPhotos");
@@ -375,21 +399,21 @@ TestCase {
         verify(app.albumView.selecting);
         compare(find("selectedLabel").text, "0 Selected");
         var grid = find("itemGrid");
-        mouseClick(grid.itemAtIndex(0));
-        mouseClick(grid.itemAtIndex(1));
+        mouseClick(listFlowItemAtIndex(grid,0));
+        mouseClick(listFlowItemAtIndex(grid,1));
         compare(find("selectedLabel").text, "2 Selected");
-        mouseClick(grid.itemAtIndex(1));
+        mouseClick(listFlowItemAtIndex(grid,1));
         compare(find("selectedLabel").text, "1 Selected");
         // The picked one framed in webOS's blue, the others dimmed
-        var frame = findChild(grid.itemAtIndex(0), "pickedFrame");
+        var frame = findChild(listFlowItemAtIndex(grid,0), "pickedFrame");
         verify(frame !== null, "picked frame");
         tryCompare(frame, "status", Image.Ready);
-        compare(findChild(grid.itemAtIndex(1), "pickedFrame"), null);
+        compare(findChild(listFlowItemAtIndex(grid,1), "pickedFrame"), null);
         shot("select");
         tap(find("selectAllButton"));
         compare(find("selectedLabel").text, "5 Selected");
         compare(find("selectAllButton").text, "Select None");
-        mouseClick(grid.itemAtIndex(4));
+        mouseClick(listFlowItemAtIndex(grid,4));
         compare(find("selectedLabel").text, "4 Selected");
         // Delete what is picked: all but one, which the service is told so.
         tap(find("deleteSelectedButton"));
@@ -417,7 +441,7 @@ TestCase {
         openAlbum("alb-holiday");
         tap(find("selectButton"));
         var grid = find("itemGrid");
-        mouseClick(grid.itemAtIndex(0));
+        mouseClick(listFlowItemAtIndex(grid,0));
         tap(find("addToAlbumButton"));
         tryVerify(function() { return app.sheet.shown; });
         var labels = app.sheet.choices.map(function(c) { return c.label; });
@@ -433,8 +457,8 @@ TestCase {
         compare(p.targetAlbum, "alb-dropbox");
         compare(p.specs, [{ sourceAlbum: "alb-holiday", photos: ["img-h1"], exclude: false, targetAlbum: "alb-dropbox" }]);
         // A video goes to the device's albums only; a new album takes it too.
-        mouseClick(grid.itemAtIndex(0));
-        mouseClick(grid.itemAtIndex(1));
+        mouseClick(listFlowItemAtIndex(grid,0));
+        mouseClick(listFlowItemAtIndex(grid,1));
         tap(find("addToAlbumButton"));
         tryVerify(function() { return app.sheet.shown; });
         labels = app.sheet.choices.map(function(c) { return c.label; });
@@ -453,7 +477,7 @@ TestCase {
         openAlbum("alb-dropbox");
         tap(find("selectButton"));
         verify(find("deleteSelectedButton").visible, "the account can delete pictures");
-        mouseClick(find("itemGrid").itemAtIndex(0));
+        mouseClick(listFlowItemAtIndex(find("itemGrid"),0));
         tap(find("deleteSelectedButton"));
         compare(app.confirm.message, "This permanently deletes the photo from your cloud account. It can't be undone.");
         shot("cloud-delete");
@@ -462,7 +486,7 @@ TestCase {
         // A device album never says so.
         openAlbum("alb-camera");
         tap(find("selectButton"));
-        mouseClick(find("itemGrid").itemAtIndex(1));
+        mouseClick(listFlowItemAtIndex(find("itemGrid"),1));
         tap(find("deleteSelectedButton"));
         compare(app.confirm.message, "Are you sure you want to delete this image?");
         cancel(app.confirm);
@@ -471,7 +495,7 @@ TestCase {
     function test_09_picture() {
         startApp();
         openAlbum("alb-holiday");
-        mouseClick(find("itemGrid").itemAtIndex(0));
+        mouseClick(listFlowItemAtIndex(find("itemGrid"),0));
         verify(app.picture.isOpen);
         compare(app.picture.current._id, "img-h1");
         verify(app.fullScreen);
@@ -589,7 +613,7 @@ TestCase {
         startApp();
         openAlbum("alb-holiday");
         // Opened from the grid, a video starts, where it was left (30 s).
-        mouseClick(find("itemGrid").itemAtIndex(1));
+        mouseClick(listFlowItemAtIndex(find("itemGrid"),1));
         tryVerify(function() { return app.picture.playing; }, 2000);
         var engine = app.picture.video.engine;
         compare(engine.seeks, [30000]);
@@ -861,7 +885,7 @@ TestCase {
         bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched },
                         "luna://com.palm.service.photos/syncAlbum": null };
         app.openAlbum("alb-unopened");
-        tryCompare(find("itemGrid"), "count", 12);
+        tryCompare(find("itemGrid"), "count", 3);
         verify(find("item-pending:alb-unopened:0"));
         tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner over them from the start");
         compare(find("albumAwaiting").width, Units.gu(12.8), "the large one: Onyx's 128px at the TouchPad's scale");
@@ -874,7 +898,7 @@ TestCase {
         var arrived = [{ _id: "img-u1", albumId: "alb-unopened", path: root + "/pictures/Holiday/beach.jpg", mediaType: "image",
                          type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400002 }];
         app.store.setEntries(albums, images.concat(arrived), Fixtures.videos());
-        tryCompare(find("itemGrid"), "count", 12);
+        tryCompare(find("itemGrid"), "count", 3);
         verify(find("item-img-u1"));
         compare(find("albumCounts").text, "1 image");
         app.store._setLoading("alb-unopened", false);
@@ -1054,8 +1078,8 @@ TestCase {
 
         openAlbum("alb-holiday");
         var grid = find("itemGrid");
-        verify(grid.height >= 2 * grid.cellHeight,
-               "two rows of pictures: " + grid.height + " for cells of " + grid.cellHeight);
+        verify(grid.height >= 2 * grid.rowHeight,
+               "two rows of pictures: " + grid.height + " for rows of " + grid.rowHeight);
         if (!app.compact)
             return;
         fuzzyCompare(bottomOf(grid), bottomOf(app.albumView), 1, "no bar below the pictures");

@@ -117,7 +117,7 @@ Item {
         id: imageModel
         query: ({ select: ["_id", "albumId", "path", "appOriginal", "mediaType", "type", "accountId",
                            "createdTime", "modifiedTime", "appGridThumbnail", "appScreenNail",
-                           "appCacheComplete", "size", "comments", "original"], limit: 500 })
+                           "appCacheComplete", "size", "comments", "original", "width", "height"], limit: 500 })
         allPages: true
         watch: true
         onStatusChanged: if (status === "ready") store._took("images", imageModel)
@@ -126,7 +126,7 @@ Item {
     Db8Model {
         id: videoModel
         query: ({ select: ["_id", "albumId", "path", "mediaType", "type", "createdTime", "modifiedTime",
-                           "duration", "lastPlayTime", "appGridThumbnail", "size", "title"], limit: 500 })
+                           "duration", "lastPlayTime", "appGridThumbnail", "size", "title", "width", "height"], limit: 500 })
         allPages: true
         watch: true
         onStatusChanged: if (status === "ready") store._took("videos", videoModel)

@@ -47,24 +47,24 @@ function albums() {
 function images() {
     return [
         { _id: "img-c1", albumId: "alb-camera", path: ROOT + "/pictures/DCIM/2026-10-08-05-36-18.jpg",
-          mediaType: "image", type: "local", createdTime: 1791430500, appCacheComplete: true,
+          mediaType: "image", type: "local", createdTime: 1791430500, appCacheComplete: true, width: 640, height: 480,
           appGridThumbnail: { path: ROOT + "/thumbs/small-thumb.jpg", cached: true,
                               dimensions: { "output-width": 80, "output-height": 60 } } },
         { _id: "img-c2", albumId: "alb-camera", path: ROOT + "/pictures/DCIM/2026-10-08-05-37-19.jpg",
-          mediaType: "image", type: "local", createdTime: 1791430560, appCacheComplete: true },
+          mediaType: "image", type: "local", createdTime: 1791430560, appCacheComplete: true, width: 480, height: 640 },
         { _id: "img-h1", albumId: "alb-holiday", path: ROOT + "/pictures/Holiday/beach.jpg", mediaType: "image",
-          type: "local", createdTime: 1791351600, appCacheComplete: true },
+          type: "local", createdTime: 1791351600, appCacheComplete: true, width: 800, height: 600 },
         { _id: "img-h2", albumId: "alb-holiday", path: ROOT + "/pictures/Holiday/forest.png", mediaType: "image",
-          type: "local", createdTime: 1791351500, appCacheComplete: true },
+          type: "local", createdTime: 1791351500, appCacheComplete: true, width: 600, height: 600 },
         { _id: "img-h3", albumId: "alb-holiday", path: ROOT + "/pictures/Holiday/panorama.jpg", mediaType: "image",
-          type: "local", modifiedTime: 1791351400, appCacheComplete: true },
+          type: "local", modifiedTime: 1791351400, appCacheComplete: true, width: 1024, height: 512},
         { _id: "img-h4", albumId: "alb-holiday", path: ROOT + "/pictures/Holiday/broken.jpg", mediaType: "image",
           type: "local", createdTime: 1791351300, appCacheComplete: true },
         { _id: "img-x", albumId: "alb-hidden", path: "/media/internal/Hidden/x.jpg", mediaType: "image",
           type: "local", createdTime: 1 },
         { _id: "img-d1", albumId: "alb-dropbox", path: ROOT + "/pictures/cloud/IMG_0001.jpg", mediaType: "image",
           type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400000,
-          appCacheComplete: true, "com.palm.dropbox": { pid: "id:abc" } }
+          appCacheComplete: true, width: 640, height: 480, "com.palm.dropbox": { pid: "id:abc" } }
     ];
 }
 
