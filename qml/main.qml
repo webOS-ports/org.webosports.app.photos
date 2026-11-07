@@ -151,6 +151,7 @@ WebOSWindow {
             albumView.cancelSelection();
         }
         pictureView.libraryChanged();
+        slideshowView.libraryChanged();
     }
 
     function showSource(src) {
