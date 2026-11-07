@@ -18,22 +18,26 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import QtQuick.Controls.LuneOS 2.0
 
 import LunaNext.Common 0.1
+import LuneOS.Forms 1.0
 
-import "components"
 import "js/Library.js" as Library
 
 /*
  * Preferences & Accounts: how much of the device the cloud photos take,
  * how much of it their whole pictures may, clearing them, and the way to
  * the accounts. What is shown is the photos service's getStorage.
+ *
+ * A light page, as the preferences of Music, Sound Recorder, Phone and the
+ * Settings app are: LuneOS.Forms' header, groups of rows and the list
+ * selector for a choice, over the settings pages' grey gradient.
  */
-Rectangle {
+Item {
     id: prefs
     objectName: "preferencesView"
-    color: "#1c1c1c"
     visible: isOpen
 
     property bool isOpen: false
@@ -60,14 +64,8 @@ Rectangle {
         return r && r.originals && r.kept ? r : null;
     }
 
-    function chooseCap() {
-        if (!info)
-            return;
-        var choices = (info.capChoices || []).map(function(b) {
-            return { label: Library.formatBytes(b), key: b, checked: b === info.capBytes,
-                     action: function() { store.setStorage(b, function(r) { if (prefs._usable(r)) prefs.info = r; }); } };
-        });
-        appWindow.sheet.show("Keep Downloaded Photos Up To", choices);
+    function setCap(bytes) {
+        store.setStorage(bytes, function(r) { if (prefs._usable(r)) prefs.info = r; });
     }
 
     function askClear() {
@@ -92,33 +90,29 @@ Rectangle {
         return true;
     }
 
+    // Swallows the taps meant for what is under it
+    MouseArea {
+        anchors.fill: parent
+    }
+
     Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Colors.pageGradientTop }
+            GradientStop { position: 1.0; color: Colors.pageGradientBottom }
+        }
+    }
+
+    AppHeader {
         id: header
+        objectName: "preferencesHeader"
+        anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         height: appWindow.headerHeight
-        color: "#2a2a2a"
-
-        IconButton {
-            id: backButton
-            objectName: "preferencesBackButton"
-            anchors.left: parent.left
-            anchors.leftMargin: Units.gu(0.5)
-            anchors.verticalCenter: parent.verticalCenter
-            image: "dark-back-arrow"
-            iconSize: Units.gu(1.6)
-            onClicked: prefs.close()
-        }
-        Label {
-            anchors.left: backButton.right
-            anchors.leftMargin: Units.gu(1.5)
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Preferences & Accounts"
-            color: "white"
-            elide: Text.ElideRight
-            font.pixelSize: FontUtils.sizeToPixels("large")
-        }
+        title: "Preferences & Accounts"
+        icon: Qt.resolvedUrl("../icon.png")
+        compact: width < Units.gu(50)
     }
 
     Flickable {
@@ -128,82 +122,83 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        contentHeight: column.height + Units.gu(4)
+        contentHeight: content.implicitHeight + Units.gu(2)
         clip: true
         boundsBehavior: Flickable.StopAtBounds
 
-        Column {
-            id: column
-            x: Units.gu(2)
-            y: Units.gu(2)
-            width: parent.width - Units.gu(4)
-            spacing: Units.gu(1.5)
+        ColumnLayout {
+            id: content
 
-            Label {
-                text: "DOWNLOADED PHOTOS"
-                color: "#9a9a9a"
-                font.pixelSize: FontUtils.sizeToPixels("small")
-                font.bold: true
-            }
-            Label {
+            // Capped and centred, as SettingsPageContent's column: a line length on a tablet
+            width: Math.min(flick.width - Units.gu(2), Units.gu(56))
+            x: (flick.width - width) / 2
+            y: Units.gu(1)
+            spacing: Units.gu(1)
+
+            ServiceUnavailableNotice {
                 objectName: "storageUnavailable"
-                width: parent.width
+                Layout.fillWidth: true
                 visible: prefs.info === null
-                wrapMode: Text.WordWrap
-                text: "How much space the cloud photos take cannot be read now."
-                color: "#c0c0c0"
+                serviceName: "com.palm.service.photos"
+                description: "How much space the cloud photos take cannot be read now."
+                onRetry: prefs.refresh()
             }
-            Repeater {
-                model: prefs.info ? [
-                    { name: "storagePictures", label: "Whole pictures",
-                      value: Library.formatBytes(prefs.info.originals.bytes) + " of " + Library.formatBytes(prefs.info.capNowBytes) },
-                    { name: "storageKept", label: "Albums kept on the device",
-                      value: prefs.info.kept.albums > 0 ? prefs.info.kept.albums + (prefs.info.kept.albums === 1 ? " album, " : " albums, ") + Library.formatBytes(prefs.info.kept.bytes) : "None" },
-                    { name: "storageOther", label: "Previews and thumbnails", value: Library.formatBytes(prefs.info.otherBytes) },
-                    { name: "storageFree", label: "Free on the device", value: Library.formatBytes(prefs.info.freeBytes) }
-                ] : []
-                delegate: Item {
-                    required property var modelData
-                    width: column.width
-                    height: Units.gu(4)
-                    Label {
-                        anchors.left: parent.left
-                        anchors.right: value.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.label
-                        color: "white"
-                        elide: Text.ElideRight
-                    }
-                    Label {
-                        id: value
-                        objectName: modelData.name
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.value
-                        color: "#c0c0c0"
-                    }
+
+            FormGroup {
+                Layout.fillWidth: true
+                visible: prefs.info !== null
+                title: "Downloaded Photos"
+
+                LabelAndSelector {
+                    objectName: "storageCapSelector"
+                    label: "Keep up to"
+                    model: prefs.info ? (prefs.info.capChoices || []).map(function(b) { return Library.formatBytes(b); }) : []
+                    values: prefs.info ? (prefs.info.capChoices || []) : []
+                    value: prefs.info ? prefs.info.capBytes : 0
+                    onChosen: (v) => prefs.setCap(v)
                 }
             }
-            Button {
-                objectName: "storageCapButton"
-                width: parent.width
+
+            ExplanationText {
+                Layout.fillWidth: true
                 visible: prefs.info !== null
-                text: prefs.info ? "Keep up to " + Library.formatBytes(prefs.info.capBytes) : ""
-                onClicked: prefs.chooseCap()
-            }
-            Label {
-                width: parent.width
-                visible: prefs.info !== null
-                wrapMode: Text.WordWrap
-                color: "#9a9a9a"
-                font.pixelSize: FontUtils.sizeToPixels("small")
                 text: prefs.info ? "Past that, or 5% of the free space, the pictures opened longest ago go back to the cloud. "
                                    + "Albums not opened for " + prefs.info.expireDays + " days go back too, and nothing is downloaded while less than "
                                    + Library.formatBytes(prefs.info.floorBytes) + " is free. Albums kept on the device stay." : ""
             }
+
+            FormGroup {
+                Layout.fillWidth: true
+                visible: prefs.info !== null
+                title: "On This Device"
+
+                LabelAndValue {
+                    objectName: "storagePictures"
+                    label: "Whole pictures"
+                    value: prefs.info ? Library.formatBytes(prefs.info.originals.bytes) + " of " + Library.formatBytes(prefs.info.capNowBytes) : ""
+                }
+                LabelAndValue {
+                    objectName: "storageKept"
+                    label: "Albums kept"
+                    value: !prefs.info ? ""
+                         : prefs.info.kept.albums > 0 ? prefs.info.kept.albums + (prefs.info.kept.albums === 1 ? " album, " : " albums, ") + Library.formatBytes(prefs.info.kept.bytes)
+                         : "None"
+                }
+                LabelAndValue {
+                    objectName: "storageOther"
+                    label: "Previews and thumbnails"
+                    value: prefs.info ? Library.formatBytes(prefs.info.otherBytes) : ""
+                }
+                LabelAndValue {
+                    objectName: "storageFree"
+                    label: "Free"
+                    value: prefs.info ? Library.formatBytes(prefs.info.freeBytes) : ""
+                }
+            }
+
             Button {
                 objectName: "clearDownloadsButton"
-                width: parent.width
+                Layout.fillWidth: true
                 visible: prefs.info !== null
                 text: prefs.clearing ? "Clearing..." : "Clear Downloaded Photos"
                 enabled: !prefs.clearing
@@ -222,18 +217,18 @@ Rectangle {
                 }
             }
 
-            Item { width: 1; height: Units.gu(1) }
-            Label {
-                text: "ACCOUNTS"
-                color: "#9a9a9a"
-                font.pixelSize: FontUtils.sizeToPixels("small")
-                font.bold: true
-            }
+            Item { Layout.preferredHeight: Units.gu(1) }
+
             Button {
                 objectName: "accountsButton"
-                width: parent.width
+                Layout.fillWidth: true
                 text: "Accounts"
                 onClicked: appWindow.launchApp("com.palm.app.accounts", {})
+            }
+
+            ExplanationText {
+                Layout.fillWidth: true
+                text: "The online accounts whose photos are shown here, and adding one, are in the Accounts app."
             }
         }
     }

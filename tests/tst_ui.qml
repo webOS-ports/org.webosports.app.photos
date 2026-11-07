@@ -1089,21 +1089,27 @@ TestCase {
         app.appMenu.close();
         verify(app.preferencesView.isOpen);
         compare(lastCall("luna://com.palm.service.photos/getStorage"), {});
-        compare(find("storagePictures").text, "41 MB of 200 MB");
-        compare(find("storageKept").text, "1 album, 46 MB");
-        compare(find("storageOther").text, "3 MB");
-        compare(find("storageFree").text, "13 GB");
-        compare(find("storageCapButton").text, "Keep up to 200 MB");
+        compare(find("storagePictures").value, "41 MB of 200 MB");
+        compare(find("storageKept").value, "1 album, 46 MB");
+        compare(find("storageOther").value, "3 MB");
+        compare(find("storageFree").value, "13 GB");
+        // The size: a list selector, as in the other apps' preferences, on a light page
+        var cap = find("storageCapSelector");
+        var combo = cap.children.filter(function(c) { return c.popup !== undefined; })[0];
+        verify(combo, "a ComboBox");
+        compare(combo.model, ["100 MB", "200 MB", "500 MB", "1 GB", "2 GB"]);
+        compare(combo.currentIndex, 1, "the size in force");
+        compare(combo.displayText, "200 MB");
+        verify(find("preferencesHeader"), "LuneOS.Forms' light header");
         shot("preferences");
-        // The size: one of those offered
-        tap(find("storageCapButton"));
-        tryVerify(function() { return app.sheet.shown; }, 2000);
-        compare(app.sheet.choices.map(function(c) { return c.label; }), ["100 MB", "200 MB", "500 MB", "1 GB", "2 GB"]);
-        verify(app.sheet.choices[1].checked);
-        choose("500 MB");
+        mouseClick(combo);
+        tryVerify(function() { return combo.popup.opened; }, 2000, "its list opens");
+        combo.popup.close();
+        combo.currentIndex = 2;
+        combo.activated(2);
         compare(lastCall("luna://com.palm.service.photos/setStorage"), { capBytes: 500 * MB });
-        compare(find("storageCapButton").text, "Keep up to 500 MB");
-        compare(find("storagePictures").text, "41 MB of 500 MB");
+        tryCompare(combo, "currentIndex", 2);
+        compare(find("storagePictures").value, "41 MB of 500 MB");
         // Clearing: asked first (scrolled to, on a small screen)
         var flick = find("preferencesFlick");
         flick.contentY = Math.max(0, flick.contentHeight - flick.height);
@@ -1124,7 +1130,7 @@ TestCase {
         tap(find("clearDownloadsButton"));
         accept(app.confirm);
         verify(!app.preferencesView.clearing, "answered: done");
-        compare(find("storagePictures").text, "0 MB of 200 MB");
+        compare(find("storagePictures").value, "0 MB of 200 MB");
         // The accounts, from here
         tap(find("accountsButton"));
         compare(launches[launches.length - 1].id, "com.palm.app.accounts");
