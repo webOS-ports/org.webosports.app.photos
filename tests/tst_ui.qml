@@ -49,6 +49,11 @@ TestCase {
         id: bus
     }
 
+    // A binding that loops is a bug (one in the album being opened went unseen)
+    function init() {
+        failOnWarning(/Binding loop detected/);
+    }
+
     function init_data() {
         return [{ tag: Settings.profileName + " " + Settings.displayWidth + "x" + Settings.displayHeight }];
     }
@@ -229,12 +234,11 @@ TestCase {
         bus.push({ accountId: "acc-dropbox", syncStatus: "syncing" });
         tryVerify(function() { return findChild(find("library-acc-dropbox"), "rowBusy") !== null; });
         bus.push({ accountId: "acc-dropbox", syncStatus: "idle", error: "Network down" });
-        tryCompare(app, "notice", "Network down");
-        compare(app.noticeTitle, "Syncing failed");
-        compare(findChild(find("notice"), "noticeTitle").text, "Syncing failed", "shown in bold above");
-        shot("sync-failed");
-        tap(find("noticeCloseButton"));
-        compare(app.notice, "");
+        tryVerify(function() { return bus.callsTo("luna://com.webos.notification/createToast").length > 0; });
+        compare(lastCall("luna://com.webos.notification/createToast"),
+                { type: "light", sourceId: "org.webosports.app.photos", message: "Syncing failed: Network down",
+                  iconUrl: app.syncGlyph }, "a banner that goes by");
+        compare(app.notice, "", "not the in-app notice");
     }
 
     function test_02_album() {
@@ -859,14 +863,15 @@ TestCase {
         // One that cannot be listed: the user is told
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorText: "offline" };
         app.openAlbum("alb-dropbox");
-        compare(app.noticeTitle, "Could not load the album");
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not load the album: offline");
+        compare(app.notice, "", "a banner, not the in-app notice");
         // An older service, which has no syncAlbum, has every photo here already: no failure
-        app.noticeTitle = "";
+        var banners = bus.callsTo("luna://com.webos.notification/createToast").length;
         app.closeAlbum();
         bus.replies["luna://com.palm.service.photos/syncAlbum"] = { returnValue: false, errorCode: -1,
                                                                    errorText: "Unknown method syncAlbum" };
         app.openAlbum("alb-dropbox");
-        compare(app.noticeTitle, "");
+        compare(bus.callsTo("luna://com.webos.notification/createToast").length, banners);
         app.closeAlbum();
         delete bus.replies["luna://com.palm.service.photos/syncAlbum"];
         bus.calls = [];
@@ -902,7 +907,7 @@ TestCase {
         var sent = launches.length;
         tap(find("shareButton"));
         compare(launches.length, sent);
-        compare(app.noticeTitle, "Could not download the picture");
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not download the picture: offline");
     }
 
     function test_19_subAlbums() {
@@ -1135,7 +1140,7 @@ TestCase {
         verify(!dash.active);
         bus.replies["luna://com.palm.service.photos/keepAlbum"] = { returnValue: false, errorText: "not enough free space" };
         app.toggleKeep(app.store.album("alb-dropbox"));
-        compare(app.noticeTitle, "Could not keep the album on the device");
+        compare(lastCall("luna://com.webos.notification/createToast").message, "Could not keep the album on the device: not enough free space");
         app.closeAlbum();
     }
 }

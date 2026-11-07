@@ -106,10 +106,9 @@ WebOSWindow {
         call: appWindow.busCall
         subscribe: appWindow.busSubscribe
         deviceName: appWindow.deviceName
-        onFailed: function(title, detail) {
-            appWindow.noticeTitle = title;
-            appWindow.notice = detail;
-        }
+        // Something that did not work out, which the user only needs to know: a banner, as
+        // webOS tells of a sync that failed
+        onFailed: function(title, detail) { appWindow.banner(detail ? title + ": " + detail : title); }
         onRevisionChanged: appWindow.checkCurrent()
         onFetchingOriginal: function(item) { pictureView.flash("Downloading the picture"); }
         onKeeping: function(album) { appWindow.keepStarted(album); }
