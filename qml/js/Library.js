@@ -153,6 +153,30 @@ function compareItems(a, b) {
     return pa < pb ? -1 : (pa > pb ? 1 : 0);
 }
 
+/*
+ * items (in compareItems order) with those whose _id is in shown first, in that
+ * order, and the rest after them in theirs: an album's pictures as they come in,
+ * each new one at the end, so that those on the screen stay where they are.
+ * Those in shown that are gone are left out.
+ */
+function stableOrder(shown, items) {
+    var byId = {};
+    for (var i = 0; i < items.length; i++)
+        byId[items[i]._id] = items[i];
+    var out = [], taken = {};
+    for (var j = 0; j < shown.length; j++) {
+        var it = byId[shown[j]];
+        if (it) {
+            out.push(it);
+            taken[it._id] = true;
+        }
+    }
+    for (var k = 0; k < items.length; k++)
+        if (!taken[items[k]._id])
+            out.push(items[k]);
+    return out;
+}
+
 function compareTitles(a, b) {
     var ta = albumTitle(a).toLowerCase(), tb = albumTitle(b).toLowerCase();
     return ta < tb ? -1 : (ta > tb ? 1 : 0);

@@ -147,11 +147,12 @@ Item {
         var got = _got;
         got[which] = true;
         _got = got;
-        // The first full answer at once; changes after a pause.
+        // The first full answer at once; changes at most every rebuildTimer.interval, also
+        // while they keep coming (an album's photos written one by one as they come down)
         if (status !== "ready" && got.albums && got.images && got.videos)
             _rebuild();
-        else if (status === "ready")
-            rebuildTimer.restart();
+        else if (status === "ready" && !rebuildTimer.running)
+            rebuildTimer.start();
     }
 
     Timer {
@@ -231,7 +232,15 @@ Item {
     }
 
     function _rebuild() {
-        lib = Library.build(_albums, _images, _videos, storageRoot);
+        var next = Library.build(_albums, _images, _videos, storageRoot);
+        // An album opened (syncAlbum) keeps the order its pictures came in: each new one at the end
+        for (var id in _arrivalOrder) {
+            var items = Library.stableOrder(_arrivalOrder[id], next.items[id] || []);
+            if (next.items[id])
+                next.items[id] = items;
+            _arrivalOrder[id] = items.map(function(it) { return it._id; });
+        }
+        lib = next;
         status = "ready";
         revision++;
     }
@@ -365,10 +374,20 @@ Item {
         loadingAlbums = next;
     }
 
+    // Opened albums: { albumId: [item _id, ...] } in the order shown since (_rebuild)
+    property var _arrivalOrder: ({})
+
     function syncAlbum(album) {
         if (!album || !album._id || album.virtual || !Library.isCloud(album))
             return;
         var id = album._id;
+        // Opened again: newest first again; those coming in from now on after them
+        if (lib.items[id]) {
+            lib.items[id].sort(Library.compareItems);
+            // Not while the album opened is still being worked out (syncAlbum is called from there)
+            Qt.callLater(function() { store.revision++; });
+        }
+        _arrivalOrder[id] = (lib.items[id] || []).map(function(it) { return it._id; });
         _setLoading(id, true);
         _service("syncAlbum", { albumId: id }, function(r) {
             store._setLoading(id, false);
