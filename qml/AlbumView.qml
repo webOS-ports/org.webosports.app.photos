@@ -304,7 +304,7 @@ Rectangle {
     LargeSpinner {
         objectName: "albumAwaiting"
         anchors.centerIn: grid
-        running: view.awaiting || view.pending > 0
+        running: view.awaiting
     }
 
     // An empty album.
