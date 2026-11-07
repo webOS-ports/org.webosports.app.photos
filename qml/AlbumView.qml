@@ -281,11 +281,12 @@ Rectangle {
         onThumbnailBroken: if (!regenerate.running) regenerate.start()
     }
 
-    BusyIndicator {
+    // Its pictures on their way: from the moment it opens (a frame held for each) until
+    // their previews are in the grid
+    LargeSpinner {
         objectName: "albumAwaiting"
         anchors.centerIn: grid
-        visible: view.awaiting && view.pending === 0
-        running: visible
+        running: view.awaiting || view.pending > 0
     }
 
     // An empty album.
