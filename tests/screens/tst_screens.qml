@@ -145,8 +145,8 @@ TestCase {
         app.openAlbum("alb-nature");
         tap(find("selectButton"));
         var grid = find("itemGrid");
-        mouseClick(grid.itemAtIndex(0));
-        mouseClick(grid.itemAtIndex(2));
+        mouseClick(listFlowItemAtIndex(grid,0));
+        mouseClick(listFlowItemAtIndex(grid,2));
         tap(find("addToAlbumButton"));
         tryVerify(function() { return app.sheet.shown; });
         shot("add-to-album");
