@@ -84,7 +84,7 @@ Rectangle {
         }
     }
 
-    ItemGrid {
+    ItemListFlow {
         objectName: "pickerGrid"
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
