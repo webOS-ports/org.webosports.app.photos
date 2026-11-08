@@ -177,6 +177,26 @@ function stableOrder(shown, items) {
     return out;
 }
 
+/*
+ * Whether two entries hold the same values, at any depth and whatever the order
+ * of their keys: a ListModel hands back its own copy of what it was given, with
+ * the keys in another order, so a changed thumbnail or size of the same _id can
+ * be told from the same entry given again.
+ */
+function sameEntry(a, b) {
+    if (a === b)
+        return true;
+    if (a === null || b === null || typeof a !== "object" || typeof b !== "object")
+        return a === b || (a !== a && b !== b);
+    var ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length)
+        return false;
+    for (var i = 0; i < ka.length; i++)
+        if (!Object.prototype.hasOwnProperty.call(b, ka[i]) || !sameEntry(a[ka[i]], b[ka[i]]))
+            return false;
+    return true;
+}
+
 function compareTitles(a, b) {
     var ta = albumTitle(a).toLowerCase(), tb = albumTitle(b).toLowerCase();
     return ta < tb ? -1 : (ta > tb ? 1 : 0);

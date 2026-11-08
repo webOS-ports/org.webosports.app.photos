@@ -154,12 +154,11 @@ TestCase {
     }
 
     function listFlowTotalCount(listFlowItem) {
-        // each delegate is a row of photos, so add them up
+        // each row of the model holds its photos; counted there, as the
+        // rows below the fold (or not made yet) have no delegate
         var totalCount = 0;
-        for (var i = 0; i < listFlowItem.count; i++ ) {
-            var rowItem = listFlowItem.itemAtIndex(i);
-            totalCount += rowItem.children.length - 1/* don't count the Repeater */;
-        }
+        for (var i = 0; i < listFlowItem.flowListModel.count; i++ )
+            totalCount += listFlowItem.flowListModel.get(i).lineContent.count;
         return totalCount;
     }
     function listFlowItemAtIndex(listFlowItem, index) {
@@ -885,9 +884,9 @@ TestCase {
         bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched },
                         "luna://com.palm.service.photos/syncAlbum": null };
         app.openAlbum("alb-unopened");
-        wait(100);
-        tryCompare(find("itemGrid"), "count", 2);
-        verify(find("item-pending:alb-unopened:0"));
+        // How many rows the 12 make depends on the screen's width: the cells are counted
+        tryVerify(function() { return listFlowTotalCount(find("itemGrid")) === 12; }, 1000, "a cell for each of the 12");
+        tryVerify(function() { return findChild(app.contentItem, "item-pending:alb-unopened:0") !== null; });
         tryVerify(function() { var w = findChild(app.albumView, "albumAwaiting"); return w && w.running; }, 1000, "the spinner over them from the start");
         compare(find("albumAwaiting").width, Units.gu(12.8), "the large one: Onyx's 128px at the TouchPad's scale");
         var frame = findChild(find("item-pending:alb-unopened:0"), "placeholder");
@@ -899,11 +898,11 @@ TestCase {
         var arrived = [{ _id: "img-u1", albumId: "alb-unopened", path: root + "/pictures/Holiday/beach.jpg", mediaType: "image",
                          type: "com.palm.dropbox", accountId: "acc-dropbox", createdTime: 1791400002 }];
         app.store.setEntries(albums, images.concat(arrived), Fixtures.videos());
-        tryCompare(find("itemGrid"), "count", 2);
-        verify(find("item-img-u1"));
+        tryVerify(function() { return findChild(app.contentItem, "item-img-u1") !== null; }, 1000, "the one that came, in its own cell");
+        compare(listFlowTotalCount(find("itemGrid")), 12, "and a frame for each of the other 11");
         compare(find("albumCounts").text, "1 image");
         app.store._setLoading("alb-unopened", false);
-        tryCompare(find("itemGrid"), "count", 1, 1000, "listed: only what came");
+        tryVerify(function() { return listFlowTotalCount(find("itemGrid")) === 1; }, 1000, "listed: only what came");
         tryVerify(function() { return findChild(app.albumView, "albumAwaiting") === null; }, 1000, "in: no spinner");
         app.closeAlbum();
         bus.replies = { "luna://com.palm.service.photos/fetchOriginal": { returnValue: true, path: fetched } };
@@ -1255,6 +1254,80 @@ TestCase {
         bus.replies["luna://com.palm.service.photos/keepAlbum"] = { returnValue: false, errorText: "not enough free space" };
         app.toggleKeep(app.store.album("alb-dropbox"));
         compare(lastCall("luna://com.webos.notification/createToast").message, "Could not keep the album on the device: not enough free space");
+        app.closeAlbum();
+    }
+
+    // The rows of an album: each as high as its cells, the last one too when
+    // it does not fill the width, and a picture whose entry changes shown anew.
+    function test_22_flowRows() {
+        startApp();
+        var grid;
+        function checkRows(what) {
+            tryVerify(function() { var row = grid.count > 0 ? grid.itemAtIndex(0) : null;
+                                   return row !== null && row.children.length > 1; }, 1000, what + ": shown");
+            // The rows below the fold are not made; the last one is scrolled to
+            grid.positionViewAtEnd();
+            wait(50);
+            var seen = 0;
+            for (var r = 0; r < grid.count; r++) {
+                var row = grid.itemAtIndex(r);
+                if (row === null)
+                    continue;
+                seen++;
+                verify(isFinite(row.height) && row.height > 0, what + ": row " + r + " is " + row.height + " high");
+                var cells = row.children.length - 1, wide = grid.spacing * (cells - 1);
+                for (var c = 0; c < cells; c++) {
+                    fuzzyCompare(row.children[c].height, row.height, 0.5, what + ": cell " + c + " of row " + r);
+                    wide += row.children[c].width;
+                }
+                // A row fills the width; only the last may stop short, at the wanted height
+                if (r < grid.count - 1 || wide > grid.width - 1)
+                    fuzzyCompare(wide, grid.width, 1, what + ": row " + r + " fills the width");
+                else
+                    fuzzyCompare(row.height, grid.rowHeight, 0.5, what + ": the last row, short, at the wanted height");
+            }
+            verify(seen > 0, what + ": rows made");
+            verify(grid.itemAtIndex(grid.count - 1) !== null, what + ": the last row, scrolled to");
+            verify(isFinite(grid.contentHeight) && grid.contentHeight > 0, what + ": the list is " + grid.contentHeight + " high");
+            grid.positionViewAtBeginning();
+        }
+        // Few enough to fit one row on any of the screens
+        app.openAlbum("alb-camera");
+        grid = find("itemGrid");
+        checkRows("Camera");
+        app.closeAlbum();
+        // Enough for several rows
+        var many = [];
+        for (var i = 0; i < 12; i++)
+            many.push({ _id: "img-m" + i, albumId: "alb-holiday", path: root + "/pictures/Holiday/forest.png",
+                        mediaType: "image", type: "local", createdTime: 1791351000 - i, appCacheComplete: true,
+                        width: 600 + (i % 3) * 200, height: 600 });
+        var images = Fixtures.images().concat(many);
+        app.store.setEntries(Fixtures.albums(), images, Fixtures.videos());
+        app.openAlbum("alb-holiday");
+        grid = find("itemGrid");
+        verify(grid.count > 1, "more than one row");
+        checkRows("Holiday");
+
+        // A little narrower: rows keeping the same pictures are kept, and each
+        // of their pictures takes the scaling of its new line
+        var width = grid.width, margin = grid.anchors.rightMargin;
+        grid.anchors.rightMargin = margin + 6;
+        compare(grid.width, width - 6, "narrower");
+        checkRows("Holiday, narrower");
+        grid.anchors.rightMargin = margin;
+        compare(grid.width, width, "as wide again");
+        checkRows("Holiday, as wide again");
+
+        // The same picture with another file: its cell shows the new one
+        var cell = find("item-img-h1");
+        verify(/beach\.jpg$/.test(cell.modelData.path), cell.modelData.path);
+        app.store.setEntries(Fixtures.albums(), images.map(function(i) {
+            if (i._id === "img-h1")
+                i = Object.assign({}, i, { path: root + "/pictures/Holiday/forest.png" });
+            return i;
+        }), Fixtures.videos());
+        tryVerify(function() { return /forest\.png$/.test(find("item-img-h1").modelData.path); }, 1000, "the cell's picture follows its entry");
         app.closeAlbum();
     }
 }
