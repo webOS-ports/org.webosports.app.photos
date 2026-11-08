@@ -1309,6 +1309,16 @@ TestCase {
         verify(grid.count > 1, "more than one row");
         checkRows("Holiday");
 
+        // A little narrower: rows keeping the same pictures are kept, and each
+        // of their pictures takes the scaling of its new line
+        var width = grid.width, margin = grid.anchors.rightMargin;
+        grid.anchors.rightMargin = margin + 6;
+        compare(grid.width, width - 6, "narrower");
+        checkRows("Holiday, narrower");
+        grid.anchors.rightMargin = margin;
+        compare(grid.width, width, "as wide again");
+        checkRows("Holiday, as wide again");
+
         // The same picture with another file: its cell shows the new one
         var cell = find("item-img-h1");
         verify(/beach\.jpg$/.test(cell.modelData.path), cell.modelData.path);

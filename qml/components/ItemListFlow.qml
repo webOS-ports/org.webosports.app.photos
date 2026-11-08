@@ -66,15 +66,15 @@ ListView {
                 flowListModel.set(idxCurrentRow, {lineHeight: lineHeight, lineContent: lineContentArray});
             }
             else {
-                // even if the row contains the same photos, update the photos scaling and line height
+                // even if the row contains the same photos, update the photos scaling and line height:
+                // the scaling depends on the whole line, so every photo gets its new one
                 lineContentArray.forEach((linePhoto, index) => {
                     let previousLinePhoto = previousRowModel.lineContent.get(index);
-                    // The model keeps a copy of each photo: one whose thumbnail,
+                    previousLinePhoto.scaling = linePhoto.scaling;
+                    // The model also keeps a copy of each photo: one whose thumbnail,
                     // path or size changed since is given to its cell again.
                     if (!Library.sameEntry(previousLinePhoto.photo, linePhoto.photo))
-                        previousRowModel.lineContent.set(index, linePhoto);
-                    else
-                        previousLinePhoto.scaling = linePhoto.scaling;
+                        previousLinePhoto.photo = linePhoto.photo;
                 });
                 previousRowModel.lineHeight = lineHeight;
             }
