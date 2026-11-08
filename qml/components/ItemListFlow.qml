@@ -68,7 +68,13 @@ ListView {
             else {
                 // even if the row contains the same photos, update the photos scaling and line height
                 lineContentArray.forEach((linePhoto, index) => {
-                    previousRowModel.lineContent.get(index).scaling = linePhoto.scaling;
+                    let previousLinePhoto = previousRowModel.lineContent.get(index);
+                    // The model keeps a copy of each photo: one whose thumbnail,
+                    // path or size changed since is given to its cell again.
+                    if (!Library.sameEntry(previousLinePhoto.photo, linePhoto.photo))
+                        previousRowModel.lineContent.set(index, linePhoto);
+                    else
+                        previousLinePhoto.scaling = linePhoto.scaling;
                 });
                 previousRowModel.lineHeight = lineHeight;
             }
@@ -104,8 +110,9 @@ ListView {
 
             // if the last photo overflows the listview's width, adjust the scaling and commit the line
             if( currentWidth > maxWidth ) {
-                var cumulatedSpacing = root.spacing * lineContentArray.length;
-                var widthScaling = (maxWidth-cumulatedSpacing)/(currentWidth-cumulatedSpacing);
+                // n photos have n-1 gaps between them, which are not scaled
+                const cumulatedSpacing = root.spacing * (lineContentArray.length - 1);
+                const widthScaling = (maxWidth-cumulatedSpacing)/(currentWidth-cumulatedSpacing);
 
                 // compute the final scaling for each photo
                 for( let linePhoto of lineContentArray ) {
@@ -121,9 +128,10 @@ ListView {
                 idxCurrentRow++;
             }
         }
-        // commit last incomplete row
+        // commit last incomplete row: it does not fill the width, so its photos
+        // keep the wanted height they were given above
         if (lineContentArray.length>0) {
-            _setOrInsertPhotoRow(idxCurrentRow++, lineContentArray, wantedHeight*widthScaling)
+            _setOrInsertPhotoRow(idxCurrentRow++, lineContentArray, wantedHeight)
         }
 
         // Remove lines that aren't there anymore

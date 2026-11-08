@@ -487,4 +487,17 @@ TestCase {
         compare(lib.byId["alb-pg-holidays"].subAlbums, 2, "an album of another account is not counted in");
         compare(lib.byId["self"].cover, null);
     }
+
+    function test_sameEntry() {
+        verify(Library.sameEntry({ _id: "a", t: { p: "x", c: true } }, { t: { c: true, p: "x" }, _id: "a" }), "keys in another order");
+        verify(!Library.sameEntry({ _id: "a", path: "/x.jpg" }, { _id: "a", path: "/y.jpg" }), "another file");
+        verify(!Library.sameEntry({ _id: "a" }, { _id: "a", width: 640 }), "a size that came");
+        verify(!Library.sameEntry({ _id: "a", t: { p: "x" } }, { _id: "a", t: { p: "x", cached: true } }), "a thumbnail that came, deeper");
+        verify(!Library.sameEntry({ _id: "a", width: 0 }, { _id: "a", width: "0" }), "0 is not \"0\"");
+        verify(Library.sameEntry({ n: NaN }, { n: NaN }));
+        verify(!Library.sameEntry({ a: null }, { a: {} }));
+        verify(!Library.sameEntry({ a: undefined }, { b: undefined }));
+        verify(Library.sameEntry({ l: [1, { x: 2 }] }, { l: [1, { x: 2 }] }));
+        verify(!Library.sameEntry({ l: [1, 2] }, { l: [2, 1] }));
+    }
 }
